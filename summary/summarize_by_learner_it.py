@@ -11,9 +11,9 @@ class SummarizeLearner():
     def __init__(self, read_filename = '', write_filename = ''):
         print('initialize '+ read_filename)
         self.reader = open(read_filename,'r')        
-        self.writefile = open(write_filename,'w')
-        self.last_sha_id = 'sha_id'
         self.user_attempts = {}
+        self.write_user_data = {}
+        self.last_sha_id = 'sha_id'
 
 
     def iterate_through_lines(self):
@@ -23,30 +23,26 @@ class SummarizeLearner():
             it would be great helpful to parallelize this function but
             not sure how to efficiently do this and maintain the sort order 
         '''
-        print(self.writefile)
-        self.csvwriter = csv.writer(csvfile = self.writefile,
-            delimiter = ',') 
-        self.write_header()
 
-        first_line = self.reader.readline()
+
+        first_line = self.reader.readline().strip()
         col_names = first_line.split(',')
         sha_id_loc = col_names.index('sha_id')
-        session_loc = col_names.index('session')
+        session_loc = col_names.index('session_start_time')
         # problem_loc = col_names.index('start_time')
         correct_loc = col_names.index('correct')
         attempt_loc = col_names.index('attempt_numbers')
-        hint_loc = col_name.index('hints_taken')
+        hint_loc = col_names.index('hints_taken')
         subject_loc = col_names.index('subject')
         topic_loc = col_names.index('topic')
         outgoing_level_loc = col_names.index('outgoing_level')
-
-
+        counter = 0
         for line in self.reader:
-            line_delimited = line.split(',')
+            line_delimited = line.strip().split(',')
             sha_id = line_delimited[sha_id_loc]
             session = line_delimited[session_loc]
             attempt = int(line_delimited[attempt_loc])
-            correct = int(line_delimited[correct_loc])
+            correct = int(line_delimited[correct_loc] == 'true')
             hint = int(line_delimited[hint_loc])
             subject = line_delimited[subject_loc]
             topic = line_delimited[topic_loc]
@@ -57,13 +53,19 @@ class SummarizeLearner():
             counter+=1
             if counter % 1000000 == 0:
                 print(counter)
+        self.reader.close()
 
     def parse_line(self, sha_id, session,  attempt, correct,
         hint, subject, topic, outgoing_level):
         '''
            Parse through each line and store the values 
         '''
-        if sha_id != self.last_sha_id:
+        if self.last_sha_id=='sha_id':
+            self.last_sha_id = sha_id
+            self.user_attempts = {}
+            self.update_attempts(session,  attempt, correct,
+                    hint, subject, topic, outgoing_level)
+        elif (sha_id!=self.last_sha_id) and (self.last_sha_id!='sha_id'):
             self.summarize_user_data()
             self.last_sha_id = sha_id
             self.user_attempts = {}
@@ -98,6 +100,7 @@ class SummarizeLearner():
 
     def summarize_user_data(self):
         sha_id = self.last_sha_id
+        user_attempts = self.user_attempts
         num_sessions = 0
         num_content = 0
         num_attempts = 0
@@ -125,55 +128,67 @@ class SummarizeLearner():
                     user_attempts[session]['outgoing_level'])
             num_mastery3 += ('mastery3' in
                     user_attempts[session]['outgoing_level'])
-        write_user_data(self, sha_id, num_sessions, num_content,
+        self.store_user_data(
+            sha_id, num_sessions, num_content,
             num_attempts, num_correct, num_hint,  num_subject, num_topic,
-            is_practiced, is_mastery1, is_mastery2, is_mastery3)
+            num_practiced, num_mastery1, num_mastery2, num_mastery3)
 
-    def write_user_data(self, sha_id, num_sessions, num_content,
+    def store_user_data(self, sha_id, num_sessions, num_content,
             num_attempts, num_correct, num_hint,  num_subject, num_topic,
-            is_practiced, is_mastery1, is_mastery2, is_mastery3):
+            num_practiced, num_mastery1, num_mastery2, num_mastery3):
         # find percentage metric
-        max_session_content = np.max( [user_attempts[session]['problem']
-             for session in user_attempts] )
-        subject_per_session = num_subject / num_sessions
-        topic_per_session = num_topic / num_sessions
-        perc_session_practiced = num_practiced / num_sessions
-        perc_session_mastery1 = num_mastery1 / num_sessions
-        perc_session_mastery2 = num_mastery2 / num_sessions
-        perc_session_mastery3 = num_mastery3 / num_sessions
-        self.csvwriter.writerow([
-                    sha_id,
-                    num_sessions,
-                    num_content,
-                    max_session_content,
-                    num_correct/num_content,
-                    num_attempts/num_content,
-                    num_hints/num_sessions,
-                    subject_per_session,
-                    topic_per_session,
-                    perc_session_practiced,
-                    perc_session_mastery1,
-                    perc_session_mastery2,
-                    perc_session_mastery3
-                ])
+        max_session_content = np.max( [self.user_attempts[session]['problem']
+             for session in self.user_attempts ])
+        perc_correct = num_correct/float(num_content)
+        avg_attempts = num_attempts/float(num_content)
+        avg_hint = num_hint/float(num_sessions)
+        subject_per_session = num_subject / float(num_sessions)
+        topic_per_session = num_topic / float(num_sessions)
+        perc_session_practiced = num_practiced / float(num_sessions)
+        perc_session_mastery1 = num_mastery1 / float(num_sessions)
+        perc_session_mastery2 = num_mastery2 / float(num_sessions)
+        perc_session_mastery3 = num_mastery3 / float(num_sessions)
+        self.write_user_data[sha_id] = [
+            sha_id,
+            num_sessions,
+            num_content,
+            max_session_content,
+            perc_correct,
+            avg_attempts,
+            avg_hint,
+            subject_per_session,
+            topic_per_session,
+            perc_session_practiced,
+            perc_session_mastery1,
+            perc_session_mastery2,
+            perc_session_mastery3
+        ]
 
 
-    def write_header(self):
-        self.csvwriter.writerow([
-            'sha_id',
-            'num_sessions',
-            'num_content',
-            'max_session_content',
-            'perc_correct',
-            'avg_attempts',
-            'avg_hints',
-            'subject_per_session',
-            'topic_per_session',
-            'perc_practiced',
-            'perc_mastery1',
-            'perc_mastery2',
-            'perc_mastery3'
-        ])
+
+    def write_data(self, write_filename):
+        # print(self.writefile)
+        with open(write_filename,'w') as writefile:
+            csvwriter = csv.writer(writefile)
+            csvwriter.writerow([
+                'sha_id',
+                'num_sessions',
+                'num_content',
+                'max_session_content',
+                'perc_correct',
+                'avg_attempts',
+                'avg_hints',
+                'subject_per_session',
+                'topic_per_session',
+                'perc_practiced',
+                'perc_mastery1',
+                'perc_mastery2',
+                'perc_mastery3'
+            ])
+            for sha_id in self.write_user_data:
+                csvwriter.writerow(
+                    self.write_user_data[sha_id]
+                )
 
 
 def main():
@@ -181,9 +196,10 @@ def main():
         '~/sorted_data/khan_data_small.csv')
     write_file = os.path.expanduser(
         '~/sorted_data/summarize_khan_data_bylearner.csv')
-    stuck = SummarizeLearner(read_filename = read_file,
+    learner_data = SummarizeLearner(read_filename = read_file,
             write_filename = write_file)
-    stuck.iterate_through_lines()
+    learner_data.iterate_through_lines()
+    learner_data.write_data(write_filename = write_file)
 
 if __name__ == '__main__':
     start = time.time() 
