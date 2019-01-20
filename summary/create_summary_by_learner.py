@@ -8,8 +8,10 @@ row by learner. Include metrics like:
 import pandas as pd
 import numpy as np
 import pdb
+import time
 
 
+begin = time.time()
 # read in data
 # [TODO] change directory for larger data
 data = pd.read_csv('~/sorted_data/khan_data_small.csv')
@@ -100,5 +102,8 @@ data_to_write = data_by_learner[[
 
 data_to_write.to_csv('~/sorted_data/khan_problem_data_by_learner.csv')
 
+
+end = time.time()
+print('%s seconds to run' % (end - begin))
 
 
