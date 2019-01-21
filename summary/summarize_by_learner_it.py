@@ -193,9 +193,9 @@ class SummarizeLearner():
 
 def main():
     read_file = os.path.expanduser( 
-        '~/sorted_data/khan_data_small.csv')
+        '~/sorted_data/khan_data_sorted.csv')
     write_file = os.path.expanduser(
-        '~/sorted_data/summarize_khan_data_bylearner.csv')
+        '~/sorted_data/summarize_khan_data_bylearner_it.csv')
     learner_data = SummarizeLearner(read_filename = read_file,
             write_filename = write_file)
     learner_data.iterate_through_lines()
