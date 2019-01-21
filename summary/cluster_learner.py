@@ -16,7 +16,7 @@ from sklearn.preprocessing import scale
 from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-
+from collections import Counter
 
 
 def unscale_center(center, prescale_std, prescale_mean):
@@ -84,11 +84,14 @@ def visualize_cluster(kmeans, scaled_data):
         marker='o', s=1, c = color)
     plt_path = os.path.expanduser('~/sorted_data/khan_learner_cluster.png')
     plt.savefig(plt_path)
+    plt.close()
 
 def create_labels_output(data, kmeans, label_path):
     # dump the json labels into a file
     sha_ids = data['sha_id']
     labels = kmeans.labels_
+    # print the count per group
+    print(Counter(labels))
     label_json = {}
     for i, label in enumerate(labels):
         sha_id = sha_ids[i]
@@ -107,7 +110,6 @@ def calculate_kmeans():
     visualize_cluster(kmeans, scaled_data)
     label_path = os.path.expanduser('~/sorted_data/khan_learner_kmean_labels')
     label_json = create_labels_output(data, kmeans, label_path)
-    
     centers_df = create_scaled_centers(kmeans, data_without_id)
     centers_df.to_csv('~/sorted_data/khan_learner_group_centers.csv')
     return kmeans.labels_ , centers_df
