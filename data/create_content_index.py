@@ -5,12 +5,15 @@
 """
 import json
 import numpy as np
+import time
+import os
 
 class CreateIndex():
 
 
     def __init__(self, exercise_filename = '', video_filename = ''):
-        print('initialize '+ read_filename)
+        print('exercise file %s' % exercise_filename)
+        print('video file %s' % video_filename)
         self.exercise_reader = open(exercise_filename,'r')
         self.video_reader = open(video_filename,'r')
         self.exercise_set = set()
@@ -18,6 +21,10 @@ class CreateIndex():
         self.exercise_dict = {}
         self.video_dict = {}
 
+    def create_dict(self):
+        self.iterate_through_exercise_lines()
+        self.iterate_through_video_lines() 
+        self.sort_and_write_sets() 
 
     def iterate_through_exercise_lines(self):
         '''
@@ -29,7 +36,7 @@ class CreateIndex():
         col_names = first_line.split(',')
         exercise_loc = col_names.index('exercise')
         counter = 0
-        for line in self.reader:
+        for line in self.exercise_reader:
             exercise_name = 'exercise:'+line[exercise_loc]
             self.exercise_set.add(exercise_name)
             counter+=1
@@ -42,11 +49,12 @@ class CreateIndex():
             iterate through video file and generate the unique
             set of content
         '''
+        print('iterate through video')
         first_line = self.video_reader.readline().strip()
         col_names = first_line.split(',')
         video_loc = col_names.index('video_id')
         counter = 0
-        for line in self.reader:
+        for line in self.video_reader:
             video_name = 'video:'+line[video_loc]
             self.video_set.add(video_name)
             counter+=1
@@ -73,11 +81,14 @@ class CreateIndex():
 def main():
     exercise_file = os.path.expanduser( 
         '~/sorted_data/khan_data_sorted.csv')
-    video_file = os.path.expanduser( 
-        '~/sorted_data/khan_data_video_sorted.csv')
+    video_file = os.path.expanduser(
+        '~/sorted_data/khan_video_data_sorted.csv')
     index_set = CreateIndex(exercise_file, video_file)
-    json.dump(index_set.exercise_dict, 'data/exercise_index')
-    json.dump(index_set.video_dict, 'data/video_index')
+    index_set.create_dict() 
+    exercise_writer = open('exercise_index','w')
+    video_writer = open('video_index','w')
+    json.dump(index_set.exercise_dict, exercise_writer)
+    json.dump(index_set.video_dict, video_writer )
 
 if __name__ == '__main__':
     start = time.time() 
