@@ -37,7 +37,8 @@ class CreateIndex():
         exercise_loc = col_names.index('exercise')
         counter = 0
         for line in self.exercise_reader:
-            exercise_name = 'exercise:'+line[exercise_loc]
+            line_delimited = line.strip().split(',')
+            exercise_name = 'exercise:'+line_delimited[exercise_loc]
             self.exercise_set.add(exercise_name)
             counter+=1
             if counter % 1000000 == 0:
@@ -55,7 +56,8 @@ class CreateIndex():
         video_loc = col_names.index('video_id')
         counter = 0
         for line in self.video_reader:
-            video_name = 'video:'+line[video_loc]
+            line_delimited = line.strip().split(',')
+            video_name = 'video:'+line_delimited[video_loc]
             self.video_set.add(video_name)
             counter+=1
             if counter % 1000000 == 0:
