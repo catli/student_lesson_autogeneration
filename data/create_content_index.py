@@ -76,8 +76,8 @@ def main():
     video_file = os.path.expanduser( 
         '~/sorted_data/khan_data_video_sorted.csv')
     index_set = CreateIndex(exercise_file, video_file)
-    json.dump(index_set.exercise_dict, 'exercise_index')
-    json.dump(index_set.video_dict, 'video_index')
+    json.dump(index_set.exercise_dict, 'data/exercise_index')
+    json.dump(index_set.video_dict, 'data/video_index')
 
 if __name__ == '__main__':
     start = time.time() 
