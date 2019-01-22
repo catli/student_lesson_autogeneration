@@ -17,7 +17,7 @@ from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-
+matplotlib.use('Agg')
 
 def unscale_center(center, prescale_std, prescale_mean):
     unscaled_center = (center * prescale_std + prescale_mean)
