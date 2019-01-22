@@ -74,7 +74,7 @@ class CreateIndex():
         for i, exercise in enumerate(exercise_array):
             self.exercise_dict[exercise] = i+1
         for i, video in enumerate(video_array):
-            self.video_dict[video_dict] = i+1
+            self.video_dict[video] = i+1
 
 
 
