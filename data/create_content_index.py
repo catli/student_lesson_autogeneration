@@ -69,8 +69,8 @@ class CreateIndex():
             set the first set item to 1, we define 0 as
             an empty set, no content consumed
         '''
-        exercise_array = np.sort([ ex for ex in exercise_set])
-        video_array = np.sort([ vid for vid in video_set])
+        exercise_array = np.sort([ ex for ex in self.exercise_set])
+        video_array = np.sort([ vid for vid in self.video_set])
         for i, exercise in enumerate(exercise_array):
             self.exercise_dict[exercise] = i+1
         for i, video in enumerate(video_array):
