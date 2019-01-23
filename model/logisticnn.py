@@ -7,10 +7,15 @@
 """
 import torch
 import torch.nn as nn
+import torchvision
+import torchvision.transforms as transforms
 
-class Neural_Network(nn.Module):
-    def __init__(self, content_dimension, session_len, batch_size):
-        super(Neural_Network, self).__init__()
+class LogisticRegression(nn.Module):
+    def __init__(self, input_size):
+        super(LogisticRegression, self).__init__()
 
-    self.dim_session_content = content_dimension * session_len
-    self.batch_size = batch_size
+    self.linear = nn.Linear()
+
+    def forward(self, x):
+        out = self.linear(x)
+        return out
