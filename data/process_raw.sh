@@ -1,5 +1,7 @@
-# Process the raw tabular and unsorted tabular data ingested from google storage
+# Process the raw and unsorted tabular data ingested from google storage
 # stitch data together and sort
+# because the data is 180GB, unix sort is by far more efficient
+# than sorting in python
 
 
 # copies from google storage
