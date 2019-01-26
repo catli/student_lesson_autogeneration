@@ -360,6 +360,10 @@ def create_index_to_content_map(content_index):
     return index_to_content_map
 
 
+def plot_loss(loss_trend, write_filename):
+     # visualize the loss
+    plt.plot(range(len(loss_trend)), loss_trend, 'r--')
+    plt.savefig(write_filename)
 
 
 
@@ -375,7 +379,7 @@ def main():
     threshold = 0.5 #what is the threshold for accepting output as 1
     # load data
     exercise_filename = os.path.expanduser(
-                '~/sorted_data/khan_problem_json_small')
+                '~/sorted_data/khan_problem_json_tiny')
     content_index_filename = 'data/exercise_index'
 
     exercise_reader = open(exercise_filename, 'r')
@@ -392,9 +396,9 @@ def main():
     # run the model
     model, loss_trend = run_model(model, train_data,
                 exercise_to_index_map, learning_rate, num_epochs)
-     # visualize the loss
-    plt.plot(range(len(loss_trend)), loss_trend, 'r--')
-    plt.savefig(os.path.expanduser('~/Downloads/loss_function.jpg'))
+    # visualize the loss
+    plot_loss(loss_trend,
+        os.path.expanduser('~/Downloads/loss_function.jpg'))
     # validate the model
     corrects, predictions, labels = validate_model(
         model, test_data, exercise_to_index_map, threshold)
