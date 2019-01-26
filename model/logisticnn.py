@@ -11,16 +11,13 @@ import torchvision
 import torchvision.transforms as transforms
 import torch.tensor as tensor
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
 import os
 import json
 import pdb
 
-input_size = 784
-num_epochs = 10
-batch_size = 100
-learning_rate = 0.1
 
 class LogisticRegression(nn.Module):
     def __init__(self, input_size, output_size):
@@ -28,14 +25,15 @@ class LogisticRegression(nn.Module):
         self.linear = nn.Linear(input_size, output_size)
 
     def forward(self, x):
-        # [@zig: is this the right approach to build this model]
+        #[ @zig: is this the right way to build out the logistic
+        #    model in pytorch ]
         out = F.sigmoid(self.linear(x))
         # out = F.relu(self.linear(x))
         return out
 
 
 
-def run_model(model, train_data, content_index):
+def run_model(model, train_data, content_index, learning_rate, num_epochs):
     '''
         Run model, iterate over batches
     '''
@@ -46,20 +44,32 @@ def run_model(model, train_data, content_index):
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learning_rate)
     # Training the Model
+    loss_trend = []
     for epoch in range(num_epochs):
         optimizer = torch.optim.SGD(
             model.parameters(), lr=learning_rate)
+        # store the array of loss trend to visualize
         # each batch has only one student
         # [TODO]: create larger batches to run
+        # [ @zig: I haven't done a good job batching the dataset.
+        #     I'm running the gradient step for every student matrix
+        #     as a separate batch and I want to batch it by stacking
+        #     n number of student input and label matrices together
+        #    is there a better way of doing this? ]
+        total_epoch_loss = 0
         for i, student in enumerate(train_data):
             # split student matrix into input and label, which contains
             #    input sessions [0:(number of sessions - 1)]
             #    label sessions [1:number of sessions]
             input_mat, label_mat = segment_input_label_data(train_data, student, content_index)
             # normalize dataset for logistic model
+            # setting output greater than 1 to 1 ehre
+            # [@zig: I'm setting the label to one here since I figure
+            #    logistic regression and sigmoid function would not work well
+            #    otherwise, is this the right way to do it?]
             input_mat, label_mat = normalize_or_threshold(input_mat, label_mat)
 
-            # [@zig: model kept returning format error until I convert to float
+            #[ @zig: model kept returning format error until I convert to float
             # other there easier ways to do this?]
             # https://community.insightdata.com/community/pl/afnqsyit5in1bf35w9ce4frcye
             input_mat = tensor(input_mat).float()
@@ -67,31 +77,20 @@ def run_model(model, train_data, content_index):
 
             # Input a matrix that has session_length x column_vectors
             outputs = model(input_mat)
-            # if student == '000JXAzy89wFPdoDMC1ySdZ/fbrGT6/p3djoBshJI0g=':
-            #     print('AFTER: STUDENT INPUT OUTPUT:')
-            #     print('inputs')
-            #     print(input_mat[input_mat>0])
-            #     print('min_input')
-            #     print(torch.min(input_mat))
-            #     print('labels')
-            #     print(label_mat[label_mat>0])
-            #     print('min_label')
-            #     print(torch.min(label_mat))
-            #     print('input')
-            #     print(outputs)
-            #     print('max')
-            #     print(torch.max(outputs))
-            #     print('min')
-            #     print(torch.min(outputs))
             loss = criterion(outputs, label_mat)
+            # add the epoc_
+            total_epoch_loss+=loss.data.detach()
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
             if (i+1) % 100 == 0:
                 print ('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' 
                        % (epoch+1, num_epochs, i+1, len(train_data), loss.data))
-    print('students: %d' % i)
-    return model
+        # [TODO] update once batch logic put in place
+        loss_trend.append(total_epoch_loss)
+        print(total_epoch_loss)
+    print('# of students: %d' % i)
+    return model, loss_trend
 
 
 
@@ -174,7 +173,7 @@ def convert_token_to_matrix(json_data, content_num):
     return student_matrix
 
 
-
+# [TODO] add or average input matrices from multiple timestamps
 # def convert_token_to_average_matrix(json_data, content_num):
 #     '''
 #         convert the token to a one-hot vector
@@ -270,7 +269,9 @@ def calculate_recall_precision(output, label, threshold, index_to_content_map):
     output_ones = set_above_threshold_to_one(output, threshold)
     label_ones = set_above_threshold_to_one(label, 1)
     correct_prediction = output_ones * label_ones
-    print_prediction_sample(output_ones, label_ones, correct_prediction, index_to_content_map)
+    # if np.sum(correct_prediction.numpy())>=1:
+    #     print_prediction_sample(output_ones,
+    #         label_ones, correct_prediction, index_to_content_map)
     num_correct = np.sum(np.array(correct_prediction.detach()))
     num_predicted = np.sum(np.array(output_ones.detach()))
     num_label = np.sum(np.array(label_ones.detach()))
@@ -367,6 +368,10 @@ def main():
         Read files locally, open, and then run model
         Generate the prediction performance
     '''
+    # set parameters
+    num_epochs = 600
+    learning_rate = 1
+    # load data
     exercise_filename = os.path.expanduser(
                 '~/sorted_data/khan_problem_json_small')
     content_index_filename = 'data/exercise_index'
@@ -374,14 +379,21 @@ def main():
     exercise_reader = open(exercise_filename, 'r')
     index_reader = open(content_index_filename, 'r')
     sessions_exercise_json = json.load(exercise_reader)
+    # split data to train and test
     train_data, test_data = split_train_and_test_data(sessions_exercise_json,
                                 test_perc= 0.2)
     exercise_to_index_map = json.load(index_reader)
     content_num = len(exercise_to_index_map)
-    print('content num %d' % content_num)
+    # instantiate the linear model
     model = LogisticRegression(input_size = content_num,
                 output_size= content_num)
-    model = run_model(model, train_data, exercise_to_index_map)
+    # run the model
+    model, loss_trend = run_model(model, train_data,
+                exercise_to_index_map, learning_rate, num_epochs)
+     # visualize the loss
+    plt.plot(range(len(loss_trend)), loss_trend, 'r--')
+    plt.savefig(os.path.expanduser('~/Downloads/loss_function.jpg'))
+    # validate the model
     corrects, predictions, labels = validate_model(
         model, test_data, exercise_to_index_map, 0.5)
     print('%d / %d = %f precision and %d / %d = %f recall' % (
