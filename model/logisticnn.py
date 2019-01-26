@@ -369,8 +369,10 @@ def main():
         Generate the prediction performance
     '''
     # set parameters
-    num_epochs = 600
+    num_epochs = 30
     learning_rate = 1
+    perc_test_split = 0.2 #ratio of splitting data between test and train
+    threshold = 0.5 #what is the threshold for accepting output as 1
     # load data
     exercise_filename = os.path.expanduser(
                 '~/sorted_data/khan_problem_json_small')
@@ -381,7 +383,7 @@ def main():
     sessions_exercise_json = json.load(exercise_reader)
     # split data to train and test
     train_data, test_data = split_train_and_test_data(sessions_exercise_json,
-                                test_perc= 0.2)
+                                test_perc= perc_test_split)
     exercise_to_index_map = json.load(index_reader)
     content_num = len(exercise_to_index_map)
     # instantiate the linear model
@@ -395,7 +397,7 @@ def main():
     plt.savefig(os.path.expanduser('~/Downloads/loss_function.jpg'))
     # validate the model
     corrects, predictions, labels = validate_model(
-        model, test_data, exercise_to_index_map, 0.5)
+        model, test_data, exercise_to_index_map, threshold)
     print('%d / %d = %f precision and %d / %d = %f recall' % (
         corrects, predictions, corrects/predictions,
         corrects, labels, corrects/labels))
