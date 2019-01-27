@@ -13,10 +13,11 @@ import torch.tensor as tensor
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.model_selection import train_test_split
-from torch.utils.data import sampler
 import os
 import json
+from sklearn.model_selection import train_test_split
+from torch.utils.data import sampler
+import random
 import pdb
 import time
 
@@ -72,7 +73,6 @@ def run_model(model, train_data, content_index,
             #    logistic regression and sigmoid function would not work well
             #    otherwise, is this the right way to do it?]
             input_mat, label_mat = normalize_or_threshold(input_mat, label_mat)
-
             #[ @zig: model kept returning format error until I convert to float
             # other there easier ways to do this?]
             # https://community.insightdata.com/community/pl/afnqsyit5in1bf35w9ce4frcye
@@ -81,6 +81,18 @@ def run_model(model, train_data, content_index,
 
             # Input a matrix that has session_length x column_vectors
             outputs = model(input_mat)
+            if i==1:
+                print('AFTER: STUDENT INPUT OUTPUT:')
+                print('inputs')
+                print(input_mat[input_mat>0])
+                print('labels')
+                print(label_mat[label_mat>0])
+                print('output')
+                print(outputs)
+                print('max output')
+                print(torch.max(outputs))
+                print('min output')
+                print(torch.min(outputs))
             loss = criterion(outputs, label_mat)
             # add the epoc_
             total_epoch_loss+=loss.data.detach()
@@ -96,7 +108,7 @@ def run_model(model, train_data, content_index,
     return model, loss_trend
 
 
-def validate_model(model, test_data, content_index, threshold):
+def validate_model(model, test_data, content_index, threshold, sample_filename):
     '''
         Validate the model on test dataset by finding percent
         of correctly guessed content
@@ -111,6 +123,7 @@ def validate_model(model, test_data, content_index, threshold):
     total_correct = 0
     total_predicted = 0
     total_label = 0
+    sample_writer = open(sample_filename, 'w')
     for student in test_data:
         test_input_mat, test_label_mat = segment_input_label_data(
             test_data, student, content_index)
@@ -118,9 +131,17 @@ def validate_model(model, test_data, content_index, threshold):
             test_input_mat, test_label_mat)
         test_input_mat = tensor(test_input_mat).float()
         test_label_mat = tensor(test_label_mat).float()
-        test_outputs = model(test_input_mat)
-        num_correct, num_predicted, num_label = calculate_recall_precision(
-            test_outputs, test_label_mat, threshold, index_to_content_map)
+        test_output = model(test_input_mat)
+        num_correct, num_predicted, num_label = validate_test_output(
+                sample_writer = sample_writer,
+                student = student,
+                input = test_input_mat,
+                output = test_output,
+                label = test_label_mat,
+                threshold = threshold,
+                index_to_content_map = index_to_content_map)
+        # calculate_recall_precision(
+        #     test_output, test_label_mat, threshold, index_to_content_map)
         total_correct+= num_correct
         total_predicted+= num_predicted
         total_label+= num_label
@@ -252,6 +273,60 @@ def convert_token_to_matrix(json_data, content_num):
 #     return student_matrix
 
 
+# [ SAMP TODO] extract the set above threshold and correct function and
+#    incorporate the latter print sample
+def validate_test_output(sample_writer, student,
+        input, output, label, threshold, index_to_content_map):
+    '''
+        compare the predicted list and the actual rate
+        then calculate the recall % and the prediction %
+        also print out 
+    '''
+    # create binary vectors whether a learners should work
+    # on an item
+    output_ones, label_ones, correct_prediction = find_correct_predictions(
+                                            output, label, threshold)
+    # write a random sample (20%)
+    if random.random()<=0.05:
+        write_prediction_sample(sample_writer, student,
+                    input, output_ones, label_ones, correct_prediction,
+                    index_to_content_map)
+    num_correct = np.sum(np.array(correct_prediction.detach()))
+    num_predicted = np.sum(np.array(output_ones.detach()))
+    num_label = np.sum(np.array(label_ones.detach()))
+    return num_correct, num_predicted, num_label
+
+
+def write_prediction_sample(sample_writer,
+        student, input, output, label, correct, index_to_content_map):
+    '''
+        print readable prediciton sample
+        for input, output, label expect a matrix that's already
+        converted to ones where value above threshold set to 1
+    '''
+    # [ SAMP TODO] ITERATE SO THAT YOU CAN 
+    for i, session_input in enumerate(input):
+        readable_input = create_readable_list(input[i], index_to_content_map)
+        readable_ouput = create_readable_list(output[i], index_to_content_map)
+        readable_label = create_readable_list(label[i], index_to_content_map)
+        readable_correct = create_readable_list(correct[i], index_to_content_map)
+        sample_writer.write(student + ',' +
+                str(readable_input) + ',' +
+                str(readable_ouput) + ',' +
+                str(readable_label) + ',' +
+                str(readable_correct) + '\n')
+
+def find_correct_predictions(output, label, threshold):
+    '''
+        compare the predicted list and the actual rate
+        then generate the locaation of correct predictions
+    '''
+    # set entries above threshold to one
+    output_ones = set_above_threshold_to_one(output, threshold)
+    label_ones = set_above_threshold_to_one(label, 1)
+    correct_prediction = output_ones * label_ones
+    return output_ones, label_ones, correct_prediction
+
 
 
 def split_input_label(student_matrix):
@@ -303,32 +378,11 @@ def set_above_threshold_to_one_np(matrix, threshold):
 
 def set_above_threshold_to_one(output, threshold):
     '''
-        set values above treshold to one and otherwise
+        set values above threshold to one and otherwise
         as zero
     '''
     return torch.where(output>=threshold,
         torch.ones(output.shape), torch.zeros(output.shape))
-
-
-def calculate_recall_precision(output, label, threshold, index_to_content_map):
-    '''
-        compare the predicted list and the actual rate
-        then calculate the recall % and the prediction %
-        store
-    '''
-    # create binary vectors whether a learners should work
-    # on an item
-    output_ones = set_above_threshold_to_one(output, threshold)
-    label_ones = set_above_threshold_to_one(label, 1)
-    correct_prediction = output_ones * label_ones
-    # if np.sum(correct_prediction.numpy())>=1:
-    #     print_prediction_sample(output_ones,
-    #         label_ones, correct_prediction, index_to_content_map)
-    num_correct = np.sum(np.array(correct_prediction.detach()))
-    num_predicted = np.sum(np.array(output_ones.detach()))
-    num_label = np.sum(np.array(label_ones.detach()))
-    return num_correct, num_predicted, num_label
-
 
 
 
@@ -356,30 +410,15 @@ def split_train_and_test_ids(data, test_perc):
     return train_ids, test_ids
 
 
-def print_prediction_sample(output, label, correct, index_to_content_map):
-    '''
-        print readable prediciton sample
-    '''
-    readable_ouput = create_readable_list(output, index_to_content_map)
-    readable_label = create_readable_list(label, index_to_content_map)
-    readable_correct = create_readable_list(correct, index_to_content_map)
-    print('PREDICTED OUTPUT')
-    print(readable_ouput)
-    print('LABEL')
-    print(readable_label)
-    print('CORRECT')
-    print(readable_correct)
 
-
-def create_readable_list(matrix, index_to_content_map):
+def create_readable_list(vect, index_to_content_map):
     '''
-       create the readable list of contents
+       create the readable list of cotent
     '''
     content = []
-    for vect in matrix:
-        indices = np.where(vect.numpy() >= 1)[0]
-        for index in indices:
-            content.append(index_to_content_map[index+1])
+    indices = np.where(vect.numpy() >= 1)[0]
+    for index in indices:
+        content.append(index_to_content_map[index+1])
     return content
 
 
@@ -426,16 +465,17 @@ def main():
         Generate the prediction performance
     '''
     # set parameters
-    num_epochs = 50
+    num_epochs = 30
     learning_rate = 1
     perc_test_split = 0.2 #ratio of splitting data between test and train
-    threshold = 0.5 #what is the threshold for accepting output as 1
+    threshold = 0.2 #what is the threshold for accepting output as 1
     batch_size = 1
     # load data
     exercise_filename = os.path.expanduser(
                 '~/sorted_data/khan_problem_json_small')
     content_index_filename = 'data/exercise_index'
-
+    sample_filename = os.path.expanduser(
+                '~/Downloads/sample_test_generated')
     exercise_reader = open(exercise_filename, 'r')
     index_reader = open(content_index_filename, 'r')
     sessions_exercise_json = json.load(exercise_reader)
@@ -455,17 +495,17 @@ def main():
         os.path.expanduser('~/Downloads/loss_function.jpg'))
     # validate the model
     corrects, predictions, labels = validate_model(
-        model, test_data, exercise_to_index_map, threshold)
+        model, test_data, exercise_to_index_map, threshold, sample_filename)
     print('%d / %d = %f precision and %d / %d = %f recall' % (
         corrects, predictions, corrects/predictions,
         corrects, labels, corrects/labels))
 
-    print('OUTPUT READABLE TRAIN DATA')
-    print_out_readable_student_data(train_data, exercise_to_index_map,
-        os.path.expanduser('~/Downloads/readable_train'))
-    print('OUTPUT READABLE TEST DATA')
-    print_out_readable_student_data(test_data, exercise_to_index_map,
-        os.path.expanduser('~/Downloads/readable_test'))
+    # print('OUTPUT READABLE TRAIN DATA')
+    # print_out_readable_student_data(train_data, exercise_to_index_map,
+    #     os.path.expanduser('~/Downloads/readable_train'))
+    # print('OUTPUT READABLE TEST DATA')
+    # print_out_readable_student_data(test_data, exercise_to_index_map,
+    #     os.path.expanduser('~/Downloads/readable_test'))
 
 
 if __name__ == '__main__':
