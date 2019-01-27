@@ -39,7 +39,6 @@ class CreateUniformData():
             sha_id = line_delimited[shaid_loc]
             if line_subject == self.subject:
                  self.subject_learner.add(sha_id)
-            self.exercise_set.add(exercise_name)
             # print counter
             counter+=1
             if counter % 1000000 == 0:
@@ -54,7 +53,7 @@ class CreateUniformData():
             <filename>_<subject>learner: contains all learners who spent time on that subject
             <filename>_<subject>only: contain only the learning records with that subject
         '''
-        reader = open(read_filename,'r')
+        reader = open(self.read_filename,'r')
         subjectlearner_writer = open(subjectlearner_filename, 'w')
         subjectonly_writer = open(subjectonly_filename, 'w')
         print('iterate through exercise')
@@ -84,15 +83,17 @@ class CreateUniformData():
 def main():
     subject = 'cc-third-grade-math'
     # full read file
-    # read_filename =  os.path.expanduser('sorted_data/khan_data_all_sorted.csv')
+    read_filename =  os.path.expanduser('~/sorted_data/khan_data_all_sorted.csv')
     # testing read file
-    read_filename =  os.path.expanduser('sorted_data/khan_data_small.csv')
+    # read_filename =  os.path.expanduser('~/sorted_data/khan_data_small.csv')
     uniform_data = CreateUniformData(read_filename, subject)
     uniform_data.find_all_subject_learners()
 
     # write files for learners and lines in subject set
-    subjectlearner_filename = os.path.expanduser('sorted_data/khan_data_subjectlearner.csv')
-    subjectonly_filename = os.path.expanduser('sorted_data/khan_data_subjectonly.csv')
+    subjectlearner_filename = os.path.expanduser('~/sorted_data/khan_data_subjectlearner.csv')
+    print(subjectlearner_filename) 
+    subjectonly_filename = os.path.expanduser('~/sorted_data/khan_data_subjectonly.csv')
+    print(subjectonly_filename) 
     uniform_data.write_uniform_file(subjectlearner_filename = subjectlearner_filename,
                     subjectonly_filename = subjectonly_filename)
 
