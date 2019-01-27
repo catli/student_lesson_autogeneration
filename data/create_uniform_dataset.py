@@ -6,8 +6,6 @@
         this is a relatively uniform set of learners
 '''
 
-import json
-import numpy as np
 import time
 import os
 
@@ -61,6 +59,8 @@ class CreateUniformData():
         subjectonly_writer = open(subjectonly_filename, 'w')
         print('iterate through exercise')
         first_line = reader.readline().strip()
+        subjectonly_writer.writelines(first_line + '\n')
+        subjectlearner_writer.writelines(first_line + '\n')
         col_names = first_line.split(',')
         # locate the subject
         shaid_loc = col_names.index('sha_id')
@@ -73,7 +73,7 @@ class CreateUniformData():
             if line_subject == self.subject:
                  subjectonly_writer.writelines(line)
             if sha_id in self.subject_learner:
-                subjectlearner_writerwritelines(line)
+                subjectlearner_writer.writelines(line)
             # print counter
             counter+=1
             if counter % 1000000 == 0:
@@ -81,20 +81,27 @@ class CreateUniformData():
         reader.close()
 
 
-subject = 'cc-third-grade-math'
-# full read file
-# read_filename =  os.path.expanduser('sorted_data/khan_data_all_sorted.csv')
-# testing read file
-read_filename =  os.path.expanduser('sorted_data/khan_data_small.csv')
-uniform_data = CreateUniformData(read_filename, subject)
-uniform_data.find_all_subject_learners()
+def main():
+    subject = 'cc-third-grade-math'
+    # full read file
+    # read_filename =  os.path.expanduser('sorted_data/khan_data_all_sorted.csv')
+    # testing read file
+    read_filename =  os.path.expanduser('sorted_data/khan_data_small.csv')
+    uniform_data = CreateUniformData(read_filename, subject)
+    uniform_data.find_all_subject_learners()
 
-# write files for learners and lines in subject set
-subjectlearner_filename = os.path.expanduser('sorted_data/khan_data_subjectlearner.csv')
-subjectonly_filename = os.path.expanduser('sorted_data/khan_data_subjectonly.csv')
-uniform_data.write_uniform_file(subjectlearner_filename = subjectlearner_filename,
-                subjectonly_filename = subjectonly_filename)
+    # write files for learners and lines in subject set
+    subjectlearner_filename = os.path.expanduser('sorted_data/khan_data_subjectlearner.csv')
+    subjectonly_filename = os.path.expanduser('sorted_data/khan_data_subjectonly.csv')
+    uniform_data.write_uniform_file(subjectlearner_filename = subjectlearner_filename,
+                    subjectonly_filename = subjectonly_filename)
 
+
+if __name__ == '__main__':
+    start = time.time() 
+    main()
+    end =time.time()
+    print(end-start)
 
 
 
