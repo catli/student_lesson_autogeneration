@@ -14,9 +14,11 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
+from torch.utils.data import sampler
 import os
 import json
 import pdb
+import time
 
 
 class LogisticRegression(nn.Module):
@@ -33,7 +35,8 @@ class LogisticRegression(nn.Module):
 
 
 
-def run_model(model, train_data, content_index, learning_rate, num_epochs):
+def run_model(model, train_data, content_index,
+        learning_rate, num_epochs, batch_size):
     '''
         Run model, iterate over batches
     '''
@@ -56,12 +59,13 @@ def run_model(model, train_data, content_index, learning_rate, num_epochs):
         #     as a separate batch and I want to batch it by stacking
         #     n number of student input and label matrices together
         #    is there a better way of doing this? ]
+        batch_ids = create_training_batch(train_data, batch_size)
         total_epoch_loss = 0
-        for i, student in enumerate(train_data):
+        for i, batch in enumerate(batch_ids):
             # split student matrix into input and label, which contains
             #    input sessions [0:(number of sessions - 1)]
             #    label sessions [1:number of sessions]
-            input_mat, label_mat = segment_input_label_data(train_data, student, content_index)
+            input_mat, label_mat = segment_input_label_batch_data(train_data, batch, content_index)
             # normalize dataset for logistic model
             # setting output greater than 1 to 1 ehre
             # [@zig: I'm setting the label to one here since I figure
@@ -83,15 +87,13 @@ def run_model(model, train_data, content_index, learning_rate, num_epochs):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            if (i+1) % 100 == 0:
+            if (i+1) % (100/batch_size) == 0:
                 print ('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' 
                        % (epoch+1, num_epochs, i+1, len(train_data), loss.data))
-        # [TODO] update once batch logic put in place
         loss_trend.append(total_epoch_loss)
         print(total_epoch_loss)
-    print('# of students: %d' % i)
+    print('# of students: %d' % (i*batch_size))
     return model, loss_trend
-
 
 
 def validate_model(model, test_data, content_index, threshold):
@@ -128,6 +130,56 @@ def validate_model(model, test_data, content_index, threshold):
 
 
 
+def create_training_batch(train_data, batch_size):
+    '''
+
+    '''
+    students = train_data.keys()
+    stud_ids = [stud_id for stud_id in students]
+    batches = list(
+        sampler.BatchSampler(sampler.SequentialSampler(stud_ids),
+            batch_size = batch_size,
+            drop_last = False))
+    batch_ids = []
+    for batch in batches:
+        batch_ids.append([stud_ids[i] for i in batch])
+    return batch_ids
+
+
+
+def segment_input_label_batch_data(data, batch, content_index):
+    '''
+        For a batch of students generate stacked input
+        and stacked output matrix from the training data
+        currently the logic for each student is simply taking the entire
+        student matrix with number of rows = number of sessions
+        and partitioning:
+            input sessions [0:(number of sessions - 1)]
+            label sessions [1:number of sessions]
+    '''
+    content_num = len(content_index)
+    batch_input = []
+    batch_label = []
+    for student in batch:
+        json_data = data[student]
+        # student_matrix: number of sessions x possible content type
+        student_matrix = convert_token_to_matrix(json_data, content_num)
+        # split student matrix into input and label, which contains
+        #    input sessions [0:(number of sessions - 1)]
+        #    label sessions [1:number of sessions]
+        input_mat, label_mat = split_input_label(student_matrix)
+        # stack batched input and output
+        if len(batch_input)==0:
+            batch_input = input_mat
+        else:
+            batch_input = np.vstack((batch_input, input_mat))
+        if len(batch_label)==0:
+            batch_label = label_mat
+        else:
+            batch_label = np.vstack((batch_label, label_mat))
+    return batch_input, batch_label
+
+
 def segment_input_label_data(data, student, content_index):
     '''
         For the specified student generate an input
@@ -139,9 +191,9 @@ def segment_input_label_data(data, student, content_index):
             label sessions [1:number of sessions]
     '''
     content_num = len(content_index)
-    json_data = data[student]
+    student_data = data[student]
     # student_matrix: number of sessions x possible content type
-    student_matrix = convert_token_to_matrix(json_data, content_num)
+    student_matrix = convert_token_to_matrix(student_data, content_num)
     # split student matrix into input and label, which contains
     #    input sessions [0:(number of sessions - 1)]
     #    label sessions [1:number of sessions]
@@ -366,6 +418,7 @@ def plot_loss(loss_trend, write_filename):
     plt.savefig(write_filename)
 
 
+#############################################################
 
 def main():
     '''
@@ -373,13 +426,14 @@ def main():
         Generate the prediction performance
     '''
     # set parameters
-    num_epochs = 30
+    num_epochs = 50
     learning_rate = 1
     perc_test_split = 0.2 #ratio of splitting data between test and train
     threshold = 0.5 #what is the threshold for accepting output as 1
+    batch_size = 1
     # load data
     exercise_filename = os.path.expanduser(
-                '~/sorted_data/khan_problem_json_tiny')
+                '~/sorted_data/khan_problem_json_small')
     content_index_filename = 'data/exercise_index'
 
     exercise_reader = open(exercise_filename, 'r')
@@ -395,7 +449,7 @@ def main():
                 output_size= content_num)
     # run the model
     model, loss_trend = run_model(model, train_data,
-                exercise_to_index_map, learning_rate, num_epochs)
+                exercise_to_index_map, learning_rate, num_epochs, batch_size)
     # visualize the loss
     plot_loss(loss_trend,
         os.path.expanduser('~/Downloads/loss_function.jpg'))
@@ -415,13 +469,20 @@ def main():
 
 
 if __name__ == '__main__':
+    # track time for testing
+    start = time.time() 
     main()
+    end =time.time()
+    print(end-start)
 
 
 
+# 620.9196426868439    batch size 1
+# 1399.3251008987427 batch size 100
+# 308.78776717185974 batch size 10
 
 
-
+#list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=False))
 
 
 # ###################
