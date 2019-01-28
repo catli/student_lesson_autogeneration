@@ -23,12 +23,12 @@ class ProcessData():
         self.exercise_index = json.load(self.exercise_index_reader)
         self.exercise_data = {}
 
-    def dump_exercise_file_into_json(self, write_filename):
+    def dump_exercise_file_into_json(self, write_filename,
+            smaller_filename = '', tiny_filename = ''):
         '''
             iterate through exercise line
             and produce a json file with the
             student id as the key 
-            # [TODO] should this product json or numpy array?
         '''
         first_line = self.exercise_reader.readline().strip()
         col_names = first_line.split(',')
@@ -45,10 +45,17 @@ class ProcessData():
             is_correct = line_delimited[correct_loc]
             self.add_new_exercise_data(student_id,
                 session_id, exercise, is_correct)
+            # [TINY TODO] write to small and tiny files
             counter+=1
             if counter % 1000000 == 0:
                 print(counter)
         self.delete_single_session_user()
+        # only grab the first 10 students  in the tiny test group (for debugging)
+        if tiny_filename!='':
+            self.write_smaller_files(tiny_filename, 20)
+        # only grab the first 5000 students in the small group (for testing model)
+        if smaller_filename!='':
+            self.write_smaller_files(smaller_filename, 5000)
         self.write_json_file(write_filename)
         return self.exercise_data
 
@@ -85,6 +92,17 @@ class ProcessData():
         print('writer file with %f students:' % len(self.exercise_data))
         json.dump(self.exercise_data, json_writer)
 
+    def write_smaller_files(self, small_filename, limit):
+        # [TINY TODO] write to small and tiny files
+        small_writer = open(small_filename, 'w')
+        small_data = {}
+        for i, student in enumerate(self.exercise_data):
+            small_data[student] = self.exercise_data[student]
+            if i>=limit:
+                break
+        small_json_writer = open(small_filename, 'w')
+        print('writer file with %f students:' % len(small_data))
+        json.dump(small_data, small_json_writer)
 
 
 
