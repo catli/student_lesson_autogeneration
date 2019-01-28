@@ -45,7 +45,6 @@ class ProcessData():
             is_correct = line_delimited[correct_loc]
             self.add_new_exercise_data(student_id,
                 session_id, exercise, is_correct)
-            # [TINY TODO] write to small and tiny files
             counter+=1
             if counter % 1000000 == 0:
                 print(counter)
@@ -93,7 +92,7 @@ class ProcessData():
         json.dump(self.exercise_data, json_writer)
 
     def write_smaller_files(self, small_filename, limit):
-        # [TINY TODO] write to small and tiny files
+        # writer a limited number of students to a smaller file for testing
         small_writer = open(small_filename, 'w')
         small_data = {}
         for i, student in enumerate(self.exercise_data):
@@ -109,12 +108,17 @@ class ProcessData():
 if __name__ == '__main__':
     start = time.time()
     exercise_filename = os.path.expanduser(
-            '~/sorted_data/khan_data_subjectlearner.csv')
-    exercise_index = 'exercise_index'
+            '~/sorted_data/khan_data_subjectonly.csv')
+    exercise_index = 'exercise_index_3only'
     json_filename =  os.path.expanduser(
-        '~/sorted_data/khan_problem_token_3learner')
+        '~/sorted_data/khan_problem_token_3only')
+    small_json_filename =  os.path.expanduser(
+        '~/sorted_data/khan_problem_token_3only_small')
+    tiny_json_filename =  os.path.expanduser(
+        '~/sorted_data/khan_problem_token_3only_tiny')
     process = ProcessData(exercise_filename, exercise_index)
-    exercise_data = process.dump_exercise_file_into_json(json_filename)
+    exercise_data = process.dump_exercise_file_into_json(json_filename, 
+            smaller_filename = small_json_filename , tiny_filename = tiny_json_filename )
     end = time.time()
     print(end-start)
 
