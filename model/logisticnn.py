@@ -37,7 +37,7 @@ class LogisticRegression(nn.Module):
 
 
 def run_model(model, train_data, content_index,
-        learning_rate, num_epochs, batch_size):
+        learning_rate, num_epochs, batch_size, test_data, threshold, input_lag=0):
     '''
         Run model, iterate over batches
     '''
@@ -66,7 +66,8 @@ def run_model(model, train_data, content_index,
             # split student matrix into input and label, which contains
             #    input sessions [0:(number of sessions - 1)]
             #    label sessions [1:number of sessions]
-            input_mat, label_mat = segment_input_label_batch_data(train_data, batch, content_index)
+            input_mat, label_mat = segment_input_label_batch_data(
+                train_data, batch, content_index, input_lag)
             # normalize dataset for logistic model
             # setting output greater than 1 to 1 ehre
             # [@zig: I'm setting the label to one here since I figure
@@ -102,13 +103,21 @@ def run_model(model, train_data, content_index,
             if (i+1) % (100/batch_size) == 0:
                 print ('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' 
                        % (epoch+1, num_epochs, i+1, len(train_data), loss.data))
+        # print how the % correct on test change with each step
+        corrects, predictions, labels = validate_model(
+            model, test_data, content_index, threshold,
+            sample_filename = 'data/none', perc_sample_print = 0)
+        print('Epoch test: %d / %d = %f precision and %d / %d = %f recall' % (
+                corrects, predictions, corrects/predictions,
+                corrects, labels, corrects/labels))
         loss_trend.append(total_epoch_loss)
         print(total_epoch_loss)
     print('# of students: %d' % (i*batch_size))
     return model, loss_trend
 
 
-def validate_model(model, test_data, content_index, threshold, sample_filename):
+def validate_model(model, test_data, content_index, threshold, sample_filename,
+    perc_sample_print, input_lag=0):
     '''
         Validate the model on test dataset by finding percent
         of correctly guessed content
@@ -125,23 +134,23 @@ def validate_model(model, test_data, content_index, threshold, sample_filename):
     total_label = 0
     sample_writer = open(sample_filename, 'w')
     for student in test_data:
-        test_input_mat, test_label_mat = segment_input_label_data(
-            test_data, student, content_index)
-        test_input_mat, test_label_mat = normalize_or_threshold(
-            test_input_mat, test_label_mat)
-        test_input_mat = tensor(test_input_mat).float()
-        test_label_mat = tensor(test_label_mat).float()
-        test_output = model(test_input_mat)
+        val_input_mat, val_label_mat = segment_input_label_data(
+            test_data, student, content_index, input_lag)
+        val_input_mat, val_label_mat = normalize_or_threshold(
+            val_input_mat, val_label_mat)
+        val_input_mat = tensor(val_input_mat).float()
+        val_label_mat = tensor(val_label_mat).float()
+        val_output = model(val_input_mat)
         num_correct, num_predicted, num_label = validate_test_output(
                 sample_writer = sample_writer,
                 student = student,
-                input = test_input_mat,
-                output = test_output,
-                label = test_label_mat,
+                input = val_input_mat,
+                output = val_output,
+                label = val_label_mat,
                 threshold = threshold,
-                index_to_content_map = index_to_content_map)
-        # calculate_recall_precision(
-        #     test_output, test_label_mat, threshold, index_to_content_map)
+                index_to_content_map = index_to_content_map,
+                perc_sample_print = perc_sample_print
+                )
         total_correct+= num_correct
         total_predicted+= num_predicted
         total_label+= num_label
@@ -168,8 +177,9 @@ def create_training_batch(train_data, batch_size):
 
 
 
-def segment_input_label_batch_data(data, batch, content_index):
+def segment_input_label_batch_data(data, batch, content_index, input_lag):
     '''
+        Segments to allow for training in batch
         For a batch of students generate stacked input
         and stacked output matrix from the training data
         currently the logic for each student is simply taking the entire
@@ -184,11 +194,11 @@ def segment_input_label_batch_data(data, batch, content_index):
     for student in batch:
         json_data = data[student]
         # student_matrix: number of sessions x possible content type
-        student_matrix = convert_token_to_matrix(json_data, content_num)
         # split student matrix into input and label, which contains
         #    input sessions [0:(number of sessions - 1)]
         #    label sessions [1:number of sessions]
-        input_mat, label_mat = split_input_label(student_matrix)
+        input_mat, label_mat = convert_token_to_matrix(json_data, content_num, input_lag)
+        #input_mat, label_mat = split_input_label(student_matrix)
         # stack batched input and output
         if len(batch_input)==0:
             batch_input = input_mat
@@ -201,7 +211,7 @@ def segment_input_label_batch_data(data, batch, content_index):
     return batch_input, batch_label
 
 
-def segment_input_label_data(data, student, content_index):
+def segment_input_label_data(data, student, content_index, input_lag):
     '''
         For the specified student generate an input
         and output matrix from the training data
@@ -214,16 +224,16 @@ def segment_input_label_data(data, student, content_index):
     content_num = len(content_index)
     student_data = data[student]
     # student_matrix: number of sessions x possible content type
-    student_matrix = convert_token_to_matrix(student_data, content_num)
     # split student matrix into input and label, which contains
     #    input sessions [0:(number of sessions - 1)]
     #    label sessions [1:number of sessions]
-    input_mat, label_mat = split_input_label(student_matrix)
+    input_mat, label_mat = convert_token_to_matrix(student_data, content_num, input_lag)
+    # input_mat, label_mat = split_input_label(student_matrix)
     return input_mat, label_mat
 
 
 
-def convert_token_to_matrix(json_data, content_num):
+def convert_token_to_matrix(json_data, content_num, input_lag):
     '''
         convert the token to a multi-hot vector
         from student session activity json_data
@@ -243,10 +253,14 @@ def convert_token_to_matrix(json_data, content_num):
             # the index of the item starts 0
             sess_vect[exercise_id-1] += 1
         student_matrix[sess_num, :] = sess_vect
-    return student_matrix
+    # split student matrix into input and label, which contains
+    #    input sessions [0:(number of sessions - 1)]
+    #    label sessions [1:number of sessions]
+    input_mat, label_mat = split_input_label(student_matrix, input_lag)
+    return input_mat, label_mat
 
 
-# [TODO] add or average input matrices from multiple timestamps
+# # [TODO] add or average input matrices from multiple timestamps
 # def convert_token_to_average_matrix(json_data, content_num):
 #     '''
 #         convert the token to a one-hot vector
@@ -267,16 +281,19 @@ def convert_token_to_matrix(json_data, content_num):
 #             # the index of the item starts 0
 #             sess_vect[exercise_id-1] = 1.0
 #         # [TODO] add the last sess
-#         # sess_vect
 #         student_matrix[sess_num, :] = sess_vect
-#         last_sess = sess_vect
+#         last_sess_vect = sess_vect
+#     # split student matrix into input and label, which contains
+#     #    input sessions [0:(number of sessions - 1)]
+#     #    label sessions [1:number of sessions]
+#     input_mat, label_mat = split_input_label(student_matrix)
 #     return student_matrix
 
 
 # [ SAMP TODO] extract the set above threshold and correct function and
 #    incorporate the latter print sample
 def validate_test_output(sample_writer, student,
-        input, output, label, threshold, index_to_content_map):
+        input, output, label, threshold, index_to_content_map, perc_sample_print):
     '''
         compare the predicted list and the actual rate
         then calculate the recall % and the prediction %
@@ -286,8 +303,8 @@ def validate_test_output(sample_writer, student,
     # on an item
     output_ones, label_ones, correct_prediction = find_correct_predictions(
                                             output, label, threshold)
-    # write a random sample (20%)
-    if random.random()<=0.05:
+    # write a random sample (i.e. 0.01 = 1% )
+    if random.random()<=perc_sample_print:
         write_prediction_sample(sample_writer, student,
                     input, output_ones, label_ones, correct_prediction,
                     index_to_content_map)
@@ -329,7 +346,7 @@ def find_correct_predictions(output, label, threshold):
 
 
 
-def split_input_label(student_matrix):
+def split_input_label(student_matrix, input_lag):
     '''
         split the matrix of student data into input and labels
         all sessions up to the last one will be used to predict
@@ -339,6 +356,20 @@ def split_input_label(student_matrix):
     input_mat = student_matrix[0:-1,:].copy()
     # all matrices from 2nd session to last one
     output_mat = student_matrix[1:,:].copy()
+    # create a lagged average input of multiple sessions
+    if input_lag == 1:
+        lag_input = np.vstack((
+                        np.zeros(student_matrix.shape[1]),
+                        student_matrix[0:-2,:].copy()))
+        input_mat = input_mat + lag_input
+    if input_lag == 2:
+        lag_input_1 = np.vstack((
+                        np.zeros(student_matrix.shape[1]),
+                        student_matrix[0:-2,:].copy()))
+        lag_input_2 = np.vstack((
+                        np.zeros((2,student_matrix.shape[1])),
+                        student_matrix[0:-3,:].copy()))
+        input_mat = input_mat + lag_input_1 + lag_input_2
     return input_mat, output_mat
 
 
@@ -457,6 +488,29 @@ def plot_loss(loss_trend, write_filename):
     plt.savefig(write_filename)
 
 
+def test_run_model():
+    content_num = 5
+    train_data = {'a':{'1': [[2,0],[0,0],[5,0]],
+                    '2': [[1,1],[1,0],[5,1]],
+                    '3': [[3,1],[1,0],[5,0]] }}
+    test_data = {'b':{'1': [[2,0],[0,0],[5,0]],
+                    '2': [[1,1],[1,0],[5,1]],
+                    '3': [[3,1],[1,0],[5,0]] }}
+    content_index = {'c1':1, 'c2':2, 'c3':3, 'c4':4, 'c5':5}
+
+    model = LogisticRegression(input_size =content_num,
+                output_size= content_num)
+    model, loss_trend = run_model(model, train_data, content_index,
+        learning_rate = 1, num_epochs = 1, batch_size = 1,
+        test_data = test_data, threshold = 0.5)
+    corrects, predictions, labels = validate_model(
+        model, test_data, content_index,
+        threshold = 0.5, sample_filename = 'test.csv', perc_sample_print = 1)
+    assert corrects>0
+    assert predictions>0
+    assert labels>0
+    print('PASS TEST')
+
 #############################################################
 
 def main():
@@ -465,15 +519,17 @@ def main():
         Generate the prediction performance
     '''
     # set parameters
-    num_epochs = 30
+    num_epochs = 10
     learning_rate = 1
     perc_test_split = 0.2 #ratio of splitting data between test and train
     threshold = 0.2 #what is the threshold for accepting output as 1
     batch_size = 1
+    perc_sample_print = 0.01
+    input_lag = 2 # how many input lags are there
     # load data
     exercise_filename = os.path.expanduser(
-                '~/sorted_data/khan_problem_json_small')
-    content_index_filename = 'data/exercise_index'
+                '~/sorted_data/khan_problem_token_3only_small')
+    content_index_filename = 'data/exercise_index_3only'
     sample_filename = os.path.expanduser(
                 '~/Downloads/sample_test_generated')
     exercise_reader = open(exercise_filename, 'r')
@@ -489,13 +545,16 @@ def main():
                 output_size= content_num)
     # run the model
     model, loss_trend = run_model(model, train_data,
-                exercise_to_index_map, learning_rate, num_epochs, batch_size)
+                exercise_to_index_map, learning_rate, num_epochs, batch_size,
+                # [TODO] delete if not printing out test at each epoch
+                test_data, threshold, input_lag = input_lag)
     # visualize the loss
     plot_loss(loss_trend,
         os.path.expanduser('~/Downloads/loss_function.jpg'))
     # validate the model
     corrects, predictions, labels = validate_model(
-        model, test_data, exercise_to_index_map, threshold, sample_filename)
+        model, test_data, exercise_to_index_map,
+        threshold, sample_filename, perc_sample_print, input_lag)
     print('%d / %d = %f precision and %d / %d = %f recall' % (
         corrects, predictions, corrects/predictions,
         corrects, labels, corrects/labels))
