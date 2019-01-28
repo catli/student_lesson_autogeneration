@@ -91,10 +91,10 @@ class ProcessData():
 if __name__ == '__main__':
     start = time.time()
     exercise_filename = os.path.expanduser(
-            '~/sorted_data/khan_data_small.csv')
+            '~/sorted_data/khan_data_subjectlearner.csv')
     exercise_index = 'exercise_index'
     json_filename =  os.path.expanduser(
-        '~/sorted_data/khan_problem_json_small')
+        '~/sorted_data/khan_problem_token_3learner')
     process = ProcessData(exercise_filename, exercise_index)
     exercise_data = process.dump_exercise_file_into_json(json_filename)
     end = time.time()
