@@ -15,7 +15,8 @@ class CreateIndex():
         print('exercise file %s' % exercise_filename)
         print('video file %s' % video_filename)
         self.exercise_reader = open(exercise_filename,'r')
-        self.video_reader = open(video_filename,'r')
+        # [TODO] UNCOMMENT FOR VIDEO
+        #self.video_reader = open(video_filename,'r')
         self.exercise_set = set()
         self.video_set = set()
         self.exercise_dict = {}
@@ -23,8 +24,10 @@ class CreateIndex():
 
     def create_dict(self):
         self.iterate_through_exercise_lines()
-        self.iterate_through_video_lines() 
-        self.sort_and_write_sets() 
+        # [TODO] UNCOMMENT FOR VIDEO
+        # self.iterate_through_video_lines() 
+        self.sort_and_write_exercise_sets() 
+        # self.sort_and_write_video_sets() 
 
     def iterate_through_exercise_lines(self):
         '''
@@ -65,16 +68,23 @@ class CreateIndex():
         self.video_reader.close()
 
 
-    def sort_and_write_sets(self):
+    def sort_and_write_exercise_sets(self):
         '''
             store the index for each content item in index
             set the first set item to 1, we define 0 as
             an empty set, no content consumed
         '''
         exercise_array = np.sort([ ex for ex in self.exercise_set])
-        video_array = np.sort([ vid for vid in self.video_set])
         for i, exercise in enumerate(exercise_array):
             self.exercise_dict[exercise] = i+1
+        
+    def sort_and_write_video_sets(self):
+        '''
+            store the index for each content item in index
+            set the first set item to 1, we define 0 as
+            an empty set, no content consumed
+        '''
+        video_array = np.sort([ vid for vid in self.video_set])
         for i, video in enumerate(video_array):
             self.video_dict[video] = i+1
 
@@ -82,15 +92,16 @@ class CreateIndex():
 
 def main():
     exercise_file = os.path.expanduser( 
-        '~/sorted_data/khan_data_sorted.csv')
+        '~/sorted_data/khan_data_subjectlearner.csv')
     video_file = os.path.expanduser(
         '~/sorted_data/khan_video_data_sorted.csv')
     index_set = CreateIndex(exercise_file, video_file)
     index_set.create_dict() 
-    exercise_writer = open('exercise_index','w')
-    video_writer = open('video_index','w')
+    exercise_writer = open('exercise_index_3learner','w')
+    #[TODO] UNCOMMENT TO RUN VIDEO FILE
+    # video_writer = open('video_index','w')
     json.dump(index_set.exercise_dict, exercise_writer)
-    json.dump(index_set.video_dict, video_writer )
+    # json.dump(index_set.video_dict, video_writer )
 
 if __name__ == '__main__':
     start = time.time() 
