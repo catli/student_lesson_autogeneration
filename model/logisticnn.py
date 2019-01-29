@@ -66,14 +66,14 @@ def run_model(model, train_data, content_index,
             # split student matrix into input and label, which contains
             #    input sessions [0:(number of sessions - 1)]
             #    label sessions [1:number of sessions]
-            input_mat, label_mat = segment_input_label_batch_data(
+            input_mat_lag, label_mat, __ = segment_input_label_batch_data(
                 train_data, batch, content_index, input_lag)
             # normalize dataset for logistic model
             # setting output greater than 1 to 1 ehre
             # [@zig: I'm setting the label to one here since I figure
             #    logistic regression and sigmoid function would not work well
             #    otherwise, is this the right way to do it?]
-            input_mat, label_mat = normalize_or_threshold(input_mat, label_mat)
+            input_mat, label_mat = normalize_or_threshold(input_mat_lag, label_mat)
             #[ @zig: model kept returning format error until I convert to float
             # other there easier ways to do this?]
             # https://community.insightdata.com/community/pl/afnqsyit5in1bf35w9ce4frcye
@@ -100,7 +100,7 @@ def run_model(model, train_data, content_index,
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            if (i+1) % (100/batch_size) == 0:
+            if (i+1) % (1000/batch_size) == 0:
                 print ('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' 
                        % (epoch+1, num_epochs, i+1, len(train_data), loss.data))
         # print how the % correct on test change with each step
@@ -129,18 +129,21 @@ def validate_model(model, test_data, content_index, threshold, sample_filename,
     # create a mapping from content back to index
     # so it can be visualized
     index_to_content_map = create_index_to_content_map(content_index)
-    total_correct = 0
-    total_predicted = 0
-    total_label = 0
+    total_correct = 0.0 
+    total_predicted = 0.0 
+    total_label = 0.0 
     sample_writer = open(sample_filename, 'w')
     for student in test_data:
-        val_input_mat, val_label_mat = segment_input_label_data(
+        val_input_mat_lag, val_label_mat, val_input_mat = segment_input_label_data(
             test_data, student, content_index, input_lag)
-        val_input_mat, val_label_mat = normalize_or_threshold(
-            val_input_mat, val_label_mat)
-        val_input_mat = tensor(val_input_mat).float()
+        val_input_mat_lag, val_label_mat = normalize_or_threshold(
+            val_input_mat_lag, val_label_mat)
+        val_input_mat_lag = tensor(val_input_mat_lag).float()
         val_label_mat = tensor(val_label_mat).float()
-        val_output = model(val_input_mat)
+        # feed lagged model into the output
+        val_output = model(val_input_mat_lag)
+        # validate test output
+        # if input_matrix lagged, make sure to input the unlagged values
         num_correct, num_predicted, num_label = validate_test_output(
                 sample_writer = sample_writer,
                 student = student,
@@ -197,18 +200,20 @@ def segment_input_label_batch_data(data, batch, content_index, input_lag):
         # split student matrix into input and label, which contains
         #    input sessions [0:(number of sessions - 1)]
         #    label sessions [1:number of sessions]
-        input_mat, label_mat = convert_token_to_matrix(json_data, content_num, input_lag)
-        #input_mat, label_mat = split_input_label(student_matrix)
+        input_mat_lag, label_mat, input_mat = convert_token_to_matrix(
+                json_data, content_num, input_lag)
         # stack batched input and output
         if len(batch_input)==0:
+            batch_input_lag = input_mat_lag
             batch_input = input_mat
         else:
+            batch_input_lag = np.vstack((batch_input_lag, input_mat_lag))
             batch_input = np.vstack((batch_input, input_mat))
         if len(batch_label)==0:
             batch_label = label_mat
         else:
             batch_label = np.vstack((batch_label, label_mat))
-    return batch_input, batch_label
+    return batch_input_lag, batch_label, batch_input
 
 
 def segment_input_label_data(data, student, content_index, input_lag):
@@ -227,9 +232,9 @@ def segment_input_label_data(data, student, content_index, input_lag):
     # split student matrix into input and label, which contains
     #    input sessions [0:(number of sessions - 1)]
     #    label sessions [1:number of sessions]
-    input_mat, label_mat = convert_token_to_matrix(student_data, content_num, input_lag)
-    # input_mat, label_mat = split_input_label(student_matrix)
-    return input_mat, label_mat
+    input_mat_lag, label_mat, input_mat = convert_token_to_matrix(
+            student_data, content_num, input_lag)
+    return input_mat_lag, label_mat, input_mat
 
 
 
@@ -251,47 +256,15 @@ def convert_token_to_matrix(json_data, content_num, input_lag):
             # add the count for the session vector
             # with the identified exercise_id
             # the index of the item starts 0
-            sess_vect[exercise_id-1] += 1
+            sess_vect[exercise_id-1] = 1 + is_correct*2
         student_matrix[sess_num, :] = sess_vect
     # split student matrix into input and label, which contains
     #    input sessions [0:(number of sessions - 1)]
     #    label sessions [1:number of sessions]
-    input_mat, label_mat = split_input_label(student_matrix, input_lag)
-    return input_mat, label_mat
+    input_mat_lag, label_mat,  input_mat = split_input_label(student_matrix, input_lag)
+    return input_mat_lag, label_mat, input_mat
 
 
-# # [TODO] add or average input matrices from multiple timestamps
-# def convert_token_to_average_matrix(json_data, content_num):
-#     '''
-#         convert the token to a one-hot vector
-#         from student session activity json_data
-#     '''
-#     sessions = sorted(json_data.keys())
-#     student_matrix = np.zeros((len(sessions), content_num))
-#     for sess_num, session in enumerate(sessions):
-#         # the number of columns = possible contents
-#         sess_vect = np.zeros((content_num))
-#         content_items = json_data[session]
-#         for item_num, item in enumerate(content_items):
-#             exercise_id = item[0]
-#             # [TODO] add is_correct as a dimension
-#             is_correct = item[1]
-#             # add the count for the session vector
-#             # with the identified exercise_id
-#             # the index of the item starts 0
-#             sess_vect[exercise_id-1] = 1.0
-#         # [TODO] add the last sess
-#         student_matrix[sess_num, :] = sess_vect
-#         last_sess_vect = sess_vect
-#     # split student matrix into input and label, which contains
-#     #    input sessions [0:(number of sessions - 1)]
-#     #    label sessions [1:number of sessions]
-#     input_mat, label_mat = split_input_label(student_matrix)
-#     return student_matrix
-
-
-# [ SAMP TODO] extract the set above threshold and correct function and
-#    incorporate the latter print sample
 def validate_test_output(sample_writer, student,
         input, output, label, threshold, index_to_content_map, perc_sample_print):
     '''
@@ -321,7 +294,6 @@ def write_prediction_sample(sample_writer,
         for input, output, label expect a matrix that's already
         converted to ones where value above threshold set to 1
     '''
-    # [ SAMP TODO] ITERATE SO THAT YOU CAN 
     for i, session_input in enumerate(input):
         readable_input = create_readable_list(input[i], index_to_content_map)
         readable_ouput = create_readable_list(output[i], index_to_content_map)
@@ -356,12 +328,13 @@ def split_input_label(student_matrix, input_lag):
     input_mat = student_matrix[0:-1,:].copy()
     # all matrices from 2nd session to last one
     output_mat = student_matrix[1:,:].copy()
+    input_mat_lag = input_mat.copy()
     # create a lagged average input of multiple sessions
     if input_lag == 1:
         lag_input = np.vstack((
                         np.zeros(student_matrix.shape[1]),
                         student_matrix[0:-2,:].copy()))
-        input_mat = input_mat + lag_input
+        input_mat_lag = input_mat + lag_input
     if input_lag == 2:
         lag_input_1 = np.vstack((
                         np.zeros(student_matrix.shape[1]),
@@ -369,18 +342,20 @@ def split_input_label(student_matrix, input_lag):
         lag_input_2 = np.vstack((
                         np.zeros((2,student_matrix.shape[1])),
                         student_matrix[0:-3,:].copy()))
-        input_mat = input_mat + lag_input_1 + lag_input_2
-    return input_mat, output_mat
+        input_mat_lag = input_mat + lag_input_1 + lag_input_2
+    return input_mat_lag, output_mat, input_mat
 
 
 
 def normalize_or_threshold(input_mat, output_mat):
     '''
         adjust the input and output matrices as necessary
+        set_above_threshold_to_one_np: set input or output to binomial state
+        normalize_vector: normalize by total count
     '''
-    # input_mat = normalize_vector(input_mat)
+    # input_mat = set_above_threshold_to_one_np(input_mat, 1)
     output_mat = set_above_threshold_to_one_np(output_mat, 1)
-    # output_mat = normalize_vector(output_mat)
+    # input_mat = normalize_vector(input_mat)
     return input_mat, output_mat
 
 
@@ -447,7 +422,7 @@ def create_readable_list(vect, index_to_content_map):
        create the readable list of cotent
     '''
     content = []
-    indices = np.where(vect.numpy() >= 1)[0]
+    indices = np.where(vect >= 1)[0]
     for index in indices:
         content.append(index_to_content_map[index+1])
     return content
@@ -519,16 +494,16 @@ def main():
         Generate the prediction performance
     '''
     # set parameters
-    num_epochs = 10
+    num_epochs = 4
     learning_rate = 1
     perc_test_split = 0.2 #ratio of splitting data between test and train
     threshold = 0.2 #what is the threshold for accepting output as 1
-    batch_size = 1
-    perc_sample_print = 0.01
-    input_lag = 2 # how many input lags are there
+    batch_size = 1   #batch size 
+    perc_sample_print = 1
+    input_lag = 0 # how many input time lags to add (up to 2)
     # load data
     exercise_filename = os.path.expanduser(
-                '~/sorted_data/khan_problem_token_3only_small')
+                '~/sorted_data/khan_problem_token_3only')
     content_index_filename = 'data/exercise_index_3only'
     sample_filename = os.path.expanduser(
                 '~/Downloads/sample_test_generated')
