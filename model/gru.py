@@ -24,7 +24,7 @@ import time
 
 class GRU_MODEL(nn.Module):
     def __init__(self, input_dim, output_dim, nb_lstm_layers, nb_lstm_units, batch_size):
-        super(GRU, self).__init__()
+        super(GRU_MODEL, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.nb_lstm_layers = nb_lstm_layers

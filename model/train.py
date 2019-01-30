@@ -108,7 +108,10 @@ if __name__ == '__main__':
     train_data, val_data, _, content_dim = split_train_and_test_data(
                 exercise_filename, content_index_file, test_perc)
     model = gru_model(input_dim = content_dim,
-        output_dim = content_dim, nb_lstm_layers, nb_lstm_units, batch_size)
+        output_dim = content_dim,
+        nb_lstm_layers = nb_lstm_layers,
+        nb_lstm_units = nb_lstm_units,
+        batch_size = batchsize)
     # [TODO] consider whether to include weight decay
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     train_and_evaluate(model, train_data, val_data, optimizer, content_num)
