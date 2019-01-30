@@ -499,7 +499,7 @@ def main():
     perc_test_split = 0.2 #ratio of splitting data between test and train
     threshold = 0.2 #what is the threshold for accepting output as 1
     batch_size = 1   #batch size 
-    perc_sample_print = 1
+    perc_sample_print = 0.1
     input_lag = 0 # how many input time lags to add (up to 2)
     # load data
     exercise_filename = os.path.expanduser(
