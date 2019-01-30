@@ -17,13 +17,13 @@ def evaluate_loss(model, loader, val_data, content_dim):
     val_loss = []
     for step, (batch_x, batch_y) in enumerate(loader):  # batch_x: index of batch data
         print('Epoch: ', epoch, ' | Iteration: ', step+1)
-        processed_data = convert_token_to_matrix(batch_x.numpy(), val_data, content_dim)
+        input_padded, label_padded, seq_len = convert_token_to_matrix(
+            batch_x.numpy(), val_data, content_dim)
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
-        seq_len = processed_data[2]
-        padded_input = tensor(torch.Tensor(processed_data[0]), requires_grad=False).cuda()
-        padded_label = tensor(torch.Tensor(processed_data[1]), requires_grad=False).cuda()
+        padded_input = tensor(torch.Tensor(input_padded), requires_grad=False).cuda()
+        padded_label = tensor(torch.Tensor(label_padded), requires_grad=False).cuda()
 
         # clear gradients and hidden state
         model.hidden = model.init_hidden()

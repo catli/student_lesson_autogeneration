@@ -23,7 +23,7 @@ def convert_token_to_matrix(batch_index, json_data, content_num):
     for stud_num, student in enumerate(batch_index):
         # the number of columns = possible contents
         sessions = sorted(json_data[student].keys())
-        for sess_num, session in enumerate(session):
+        for sess_num, session in enumerate(sessions):
             content_items = json_data[session]
             for item_num, item in enumerate(content_items):
                 exercise_id = item[0]
@@ -36,34 +36,41 @@ def convert_token_to_matrix(batch_index, json_data, content_num):
     return input_padded, label_padded, input_len
 
 
-def split_train_and_test_data(exercise_filename, content_index_file, test_perc):  # t==22, subtraining and validation; t==25, training and testing
+def split_train_and_test_data(exercise_filename, content_index_filename,
+            test_perc):  # t==22, subtraining and validation; t==25, training and testing
     '''
         split the data into training and test by learners
     '''
     exercise_reader = open(exercise_filename, 'r')
-    index_reader = open(content_index_filename, 'r')
     sessions_exercise_json = json.load(exercise_reader)
     train_data = {}
     val_data = {}
-    train_ids, val_ids = split_train_and_test_ids(data, test_perc)
+    train_ids, val_ids = split_train_and_test_ids(data = sessions_exercise_json
+                            , test_perc = test_perc)
     for id in train_ids: train_data[id] = data[id]
     for id in val_ids: val_data[id] = data[id]
-    return train_data, val_data
+    # [TODO] for count_content_num, consider moving this to train.py
+    # to expose the json file
+    index_reader = open(content_index_filename, 'r')
+    exercise_to_index_map = json.load(index_reader)
+    content_num = count_content_num(exercise_to_index_map)
+    return train_data, val_data, exercise_to_index_map, content_num
 
 
 
-def split_train_and_test_ids(data, test_perc):
+def split_train_and_test_ids(json_data, test_perc):
     '''
         split anon ids into test_perc % in test dataset
         and 1-test_perc % in training dataset
     '''
-    student_ids = [student for student in data]
+    student_ids = [student for student in json_data]
     train_ids , val_ids = train_test_split(student_ids,
             test_size = 0.2)
     return train_ids, val_ids
 
 
-
+def count_content_num(exercise_map):
+    return len(exercise_map.keys())
 
 
 # def split_input_label(student_matrix, input_lag):

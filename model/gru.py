@@ -34,7 +34,7 @@ class GRU(nn.Module):
                 hidden_size=nb_lstm_units,
                 num_layers=nb_lstm_layers,
                 batch_first=True)
-        self.hidden_layer()
+        self.hidden = init_hidden()
         self.hidden_to_output = nn.Linear(self.nb_lstm_units,
             self.dim_output)
 
