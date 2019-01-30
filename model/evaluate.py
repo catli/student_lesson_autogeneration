@@ -3,8 +3,6 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import functional as F
-import myLSTM as LSTM
-import pickle
 import numpy as np
 import torch.utils.data as Data
 from data_process import process_data, get_data_from_condense_seq

@@ -22,7 +22,7 @@ import time
 
 
 
-class GRU(nn.Module):
+class GRU_MODEL(nn.Module):
     def __init__(self, input_dim, output_dim, nb_lstm_layers, nb_lstm_units, batch_size):
         super(GRU, self).__init__()
         self.input_dim = input_dim

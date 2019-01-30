@@ -6,7 +6,7 @@
     by WeiJiang (@fabulosa)
 '''
 
-from GRU import GRU as gru_model
+from gru import GRU as gru_model
 import torch
 import torch.nn as nn
 from logisticnn import Neural_Network
@@ -29,6 +29,7 @@ def train_and_evaluate(model, train_data, val_data, optimizer, content_num):
     # [TODO] how to save the training data
     # [TODO] figure out hwo to use DataLoader for data in json format
     #     otherwise might need to reconsider format
+    pdb.set_trace()
     train_data_index = torch.IntTensor(len(train_data)) #range(val_data.shape[0])
     torch_train_data_index = Data.TensorDataset(data_tensor=train_data_index,
                     target_tensor=train_data_index)
@@ -102,11 +103,11 @@ if __name__ == '__main__':
     learning_rate = 0.001
     test_perc = 0.2
     exercise_filename = os.path.expanduser(
-                '~/sorted_data/khan_problem_token_3only')
-    content_index_filename = 'data/exercise_index_3only'
-    train_data, val_data, _, content_num = split_train_and_test_data(
+                '~/sorted_data/khan_problem_token_3only_tiny')
+    content_index_filename = 'data/exercise_index_3only_tiny'
+    train_data, val_data, _, content_dim = split_train_and_test_data(
                 exercise_filename, content_index_file, test_perc)
-    model = gru_model(input_dim = content_dim, 
+    model = gru_model(input_dim = content_dim,
         output_dim = content_dim, nb_lstm_layers, nb_lstm_units, batch_size)
     # [TODO] consider whether to include weight decay
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
