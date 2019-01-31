@@ -6,7 +6,7 @@
 The model built will learn how highly-motivated learners progress through Khan Academy on their own, and use that information to curate a set of lesson for active learners.  
 
 The input for the model are the series of lessons prior to the target lesson. And we want to validate the performance based on how well the model is able to predict subsequent lessons that the learner chooses.  
-
+[TODO: Add visual]
 
 ### Description of Repo
 [TODO]
