@@ -1,18 +1,21 @@
 import numpy as np
+import json
+from sklearn.model_selection import train_test_split
 
 
-def convert_token_to_matrix(batch_index, json_data, content_num):
+def convert_token_to_matrix(batch_index, json_data, json_keys, content_num):
     '''
         convert the token to a multi-hot vector
         from student session activity json_data
         convert this data in batch form
     '''
     # number of students in the batch
-    batchsize = lens(batch_index)
+    batchsize = len(batch_index)
     num_sess = []
     # max number of sessions in batch
-    for student in batch_index:
-        num_sess.append(lens(json_data[student].keys()))
+    for student_index in batch_index:
+        student_key = json_keys[student_index]
+        num_sess.append(len(json_data[student_key].keys()))
     max_seq = np.max(num_sess)
 
     # placeholder padded input, padded with additional sessions
@@ -20,11 +23,12 @@ def convert_token_to_matrix(batch_index, json_data, content_num):
     # padded label
     # label_padded = np.zeros((batchsize, int(max_seq)-1, content_num), int)
 
-    for stud_num, student in enumerate(batch_index):
+    for stud_num, student_index in enumerate(batch_index):
         # the number of columns = possible contents
-        sessions = sorted(json_data[student].keys())
+        student_key = json_keys[student_index]
+        sessions = sorted(json_data[student_key].keys())
         for sess_num, session in enumerate(sessions):
-            content_items = json_data[session]
+            content_items = json_data[student_key][session]
             for item_num, item in enumerate(content_items):
                 exercise_id = item[0]
                 is_correct = item[1]
@@ -45,10 +49,10 @@ def split_train_and_test_data(exercise_filename, content_index_filename,
     sessions_exercise_json = json.load(exercise_reader)
     train_data = {}
     val_data = {}
-    train_ids, val_ids = split_train_and_test_ids(data = sessions_exercise_json
+    train_ids, val_ids = split_train_and_test_ids(json_data = sessions_exercise_json
                             , test_perc = test_perc)
-    for id in train_ids: train_data[id] = data[id]
-    for id in val_ids: val_data[id] = data[id]
+    for id in train_ids: train_data[id] = sessions_exercise_json[id]
+    for id in val_ids: val_data[id] = sessions_exercise_json[id]
     # [TODO] for count_content_num, consider moving this to train.py
     # to expose the json file
     index_reader = open(content_index_filename, 'r')

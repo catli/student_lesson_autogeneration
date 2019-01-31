@@ -5,65 +5,76 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 import numpy as np
 import torch.utils.data as Data
-from data_process import process_data, get_data_from_condense_seq
+from process_data import split_train_and_test_data, convert_token_to_matrix
+import pdb
 
 # for validation loss in early stopping
 
-def evaluate_loss(model, loader, val_data, content_dim):
+def evaluate_loss(model, loader, val_data, val_keys, content_dim, threshold):
     # set in training node
-    model.train()
+    model.eval()
     val_loss = []
-    for step, (batch_x, batch_y) in enumerate(loader):  # batch_x: index of batch data
-        print('Epoch: ', epoch, ' | Iteration: ', step+1)
+    total_predicted = 0
+    total_label = 0
+    total_correct = 0
+    for step, batch_x in enumerate(loader):  # batch_x: index of batch data
+        print('Evaluate Loss | Iteration: ', step+1)
+        # convert token data to matrix
+        # need to convert batch_x from tensor flow object to numpy array
+        # before converting to matrix
         input_padded, label_padded, seq_len = convert_token_to_matrix(
-            batch_x.numpy(), val_data, content_dim)
+            batch_x[0].numpy(), val_data, val_keys, content_dim)
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
-        padded_input = tensor(torch.Tensor(input_padded), requires_grad=False).cuda()
-        padded_label = tensor(torch.Tensor(label_padded), requires_grad=False).cuda()
-
+        padded_input = Variable(torch.Tensor(input_padded), requires_grad=False)#.cuda()
+        padded_label = Variable(torch.Tensor(label_padded), requires_grad=False)#.cuda()
         # clear gradients and hidden state
-        model.hidden = model.init_hidden()
-        model.hidden[0] = model.hidden[0].cuda()
-        model.hidden[1] = model.hidden[1].cuda()
+        # model.hidden = model.init_hidden()
+        # model.hidden[0] = model.hidden[0]#.cuda()
+        # model.hidden[1] = model.hidden[1]#.cuda()
         # is this equivalent to generating prediction
         # what is the label generated?
-        y_pred = model(padded_input, seq_len).cuda()
-        loss = model.loss(y_pred, padded_label).cuda()
-        val_loss.append(loss.data[0])
-
-    average_loss = np.mean(val_loss)
-    return average_loss
-
-
-def evaluate_precision_and_recall(model, loader, val_data, batchsize, content_dim,
-    threshold):
-
-    model.eval()
-    total_correct = 0.0
-    total_predicted = 0.0
-    total_label = 0.0
-    for step, (batch_x, batch_y) in enumerate(loader):  # batch_x: index of batch data
-        processed_data = convert_token_to_matrix(batch_x.numpy(), val_data, batchsize, content_dim)
-        # depending on
-        padded_input = Variable(torch.Tensor(processed_data[0]), requires_grad=False).cuda()
-        padded_label = Variable(torch.Tensor(processed_data[1]), requires_grad=False).cuda()
-        seq_len = processed_data[2]
-
-        # clear hidden states
-        model.hidden = model.init_hidden()
-        # [TODO] update the hidden unit, may only need one
-        model.hidden[0] = model.hidden[0].cuda()
-        model.hidden[1] = model.hidden[1].cuda()
-        # compute output
-        y_pred = model(padded_input, seq_len).cuda()
-        # only compute the loss for testing period
-        # [TODO] padded_input may need to be masked before calculating precision / recall?
-        # [TODO] add write prediction sample
+        y_pred = model(padded_input)#.cuda()
+        loss = model.loss(y_pred, padded_label)#.cuda()
+        # append the loss after converting back to numpy object from tensor
+        val_loss.append(loss.data.numpy())
         num_predicted, num_label, num_correct = find_correct_predictions(
-            y_pred, label, threshold).cuda()
-    return total_correct, total_predicted, total_label
+            y_pred, padded_label, threshold)#.cuda()
+    average_loss = np.mean(val_loss)
+    total_predicted += num_predicted
+    total_label = num_label
+    total_correct += num_correct
+    return average_loss, total_predicted, total_label, total_correct
+
+
+# def evaluate_precision_and_recall(model, loader, val_data, val_keys,  batchsize, content_dim,
+#     threshold):
+#     model.eval()
+#     total_correct = 0.0
+#     total_predicted = 0.0
+#     total_label = 0.0
+#     for step, batch_x in enumerate(loader):  # batch_x: index of batch data
+#         processed_data = convert_token_to_matrix(
+#             batch_x[0].numpy(), val_data, val_keys, content_dim)
+#         # depending on
+#         padded_input = Variable(torch.Tensor(processed_data[0]), requires_grad=False)#.cuda()
+#         padded_label = Variable(torch.Tensor(processed_data[1]), requires_grad=False)#.cuda()
+#         seq_len = processed_data[2]
+
+#         # clear hidden states
+#         model.hidden = model.init_hidden()
+#         # [TODO] update the hidden unit, may only need one
+#         # model.hidden[0] = model.hidden[0]#.cuda()
+#         # model.hidden[1] = model.hidden[1]#.cuda()
+#         # compute output
+#         y_pred = model(padded_input)#.cuda()
+#         # only compute the loss for testing period
+#         # [TODO] padded_input may need to be masked before calculating precision / recall?
+#         # [TODO] add write prediction sample
+#         num_predicted, num_label, num_correct = find_correct_predictions(
+#             y_pred, padded_label, threshold)#.cuda()
+#     return num_predicted, num_label, num_correct
 
 
 
@@ -95,20 +106,21 @@ def find_correct_predictions(output, label, threshold):
         then generate the locaation of correct predictions
     '''
     # set entries below threshold to one
-    thresholder = torch.nn.Threshold(threshold, 0)
+    # thresholder = F.threshold(threshold, 0)
     # any predicted values below threshold be set to 0
-    threshold_output = thresholder(output)
+    threshold_output = F.threshold(output, threshold, 0)
     # find the difference between label and prediction
-    # where the label is one and threshold output
-    # predicts 0, then the difference would be 1
+    # where prediction is incorrect (label is one and
+    # threshold output 0), then the difference would be 1
     # [TODO] PDB.set_trace() to check that
     #     operations for 3 dimension matrix works out
     predict_diff = label - threshold_output
-    set_correct_to_one = torch.nn.Threshold(0.99, 0)
-    num_incorrect = len(set_correct_to_one(predict_diff))
+    # set_correct_to_one = F.threshold(0.99, 0)
+    incorrect_ones = F.threshold(predict_diff, 0.99, 0)
+    num_incorrect = len(torch.nonzero(incorrect_ones))
     # all incorrect prediction would be greater than 0
-    num_predicted = len(len(torch.nonzero(threshold_output)))
-    num_label = torch.nonzero(label)
+    num_predicted = len(torch.nonzero(threshold_output))
+    num_label = len(torch.nonzero(label))
     num_correct = num_label - num_incorrect
     return num_predicted, num_label, num_correct
 
