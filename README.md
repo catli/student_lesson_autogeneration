@@ -15,8 +15,8 @@ The input for the model are the series of lessons prior to the target lesson. An
 
 
 ### Data
-[TODO] Generate fake data to test model
-
+[TODO] 
+Data contains x learners over 3 months, and y subjects. 
 
 #### Background
 There are a couple of inspirations for this project. 
