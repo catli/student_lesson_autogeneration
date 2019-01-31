@@ -22,9 +22,9 @@ import time
 
 
 
-class GRU(nn.Module):
+class GRU_MODEL(nn.Module):
     def __init__(self, input_dim, output_dim, nb_lstm_layers, nb_lstm_units, batch_size):
-        super(GRU, self).__init__()
+        super(GRU_MODEL, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.nb_lstm_layers = nb_lstm_layers
@@ -34,9 +34,9 @@ class GRU(nn.Module):
                 hidden_size=nb_lstm_units,
                 num_layers=nb_lstm_layers,
                 batch_first=True)
-        self.hidden = init_hidden()
+        self.hidden = self.init_hidden()
         self.hidden_to_output = nn.Linear(self.nb_lstm_units,
-            self.dim_output)
+            self.output_dim)
 
 
     def init_hidden(self):
@@ -49,18 +49,20 @@ class GRU(nn.Module):
         self.hidden_layer = tensor(torch.zeros(self.nb_lstm_layers,
                     self.batch_size, self.nb_lstm_units))
 
-    def forward(self, batch_data, batch_data_length):
+    def forward(self, batch_data):
         '''
             apply the forward function for the model
         '''
         seq_len = batch_data.size()[1]
         # check that the gru unit treats the s
         gru_out, self.hidden = self.model(batch_data, self.hidden)
-        output = self.hidden_to_output(linear_in)
-        return out
+        output = self.hidden_to_output(gru_out)
+        return output
 
     def loss(self, output, label):
-        cross_entropy1 = nn.CrossEntropyLoss()
-        loss = nn.cross_entropy2(output, label)
+        # [TODO] test out different loss functions
+        # cross_entropy = nn.CrossEntropyLoss()
+        mse = nn.MSELoss()
+        loss = mse(output, label)
         return loss
 
