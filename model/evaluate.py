@@ -30,7 +30,7 @@ def evaluate_loss(model, loader, val_data, val_keys, content_dim, threshold):
         padded_input = Variable(torch.Tensor(input_padded), requires_grad=False)#.cuda()
         padded_label = Variable(torch.Tensor(label_padded), requires_grad=False)#.cuda()
         # clear gradients and hidden state
-        # model.hidden = model.init_hidden()
+        model.hidden = model.init_hidden()
         # model.hidden[0] = model.hidden[0]#.cuda()
         # model.hidden[1] = model.hidden[1]#.cuda()
         # is this equivalent to generating prediction

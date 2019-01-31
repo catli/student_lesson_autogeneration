@@ -93,7 +93,7 @@ def train(model, optimizer, loader, train_data,
         # clear gradients and hidden state
         # [TODO] check why you need to init hidden layer
         optimizer.zero_grad()
-        #model.hidden = model.init_hidden()
+        model.hidden = model.init_hidden()
         #model.hidden[0] = model.hidden[0] #.cuda()
         #model.hidden[1] = model.hidden[1]#.cuda()
         # is this equivalent to generating prediction

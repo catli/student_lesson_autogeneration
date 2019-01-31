@@ -34,7 +34,6 @@ class GRU_MODEL(nn.Module):
                 hidden_size=nb_lstm_units,
                 num_layers=nb_lstm_layers,
                 batch_first=True)
-        self.hidden = self.init_hidden()
         self.hidden_to_output = nn.Linear(self.nb_lstm_units,
             self.output_dim)
 
@@ -52,15 +51,29 @@ class GRU_MODEL(nn.Module):
     def forward(self, batch_data):
         '''
             apply the forward function for the model
+            clarifying with example from:
+            towardsdatascience.com/\
+            taming-lstms-variable-sized-mini-batches-and-why-pytorch-is-good-for-your-health-61d35642972e
         '''
-        seq_len = batch_data.size()[1]
+        self.hidden = self.init_hidden()
+        batch_size, seq_len, _ = batch_data.size()
         # check that the gru unit treats the s
+        packed_input = utils.rnn.pack_padded_sequence(
+            batch_data, seq_len, batch_first=True)
         gru_out, self.hidden = self.model(batch_data, self.hidden)
+        unpacked_out = utils.rnn.pad_packed_sequence(gru_out, batch_first=True)
+        # [TODO] check to see what this unpacking is doing
+        unpacked_out = unpacked_out.contiguous()
+        unpacked_out = X.view(-1, unpacked_out.shape[2])
         output = self.hidden_to_output(gru_out)
+        # Add a sigmoid layer
+        sigmoid_out = F.sigmoid(self.linear(output))
+        output = sigmoid_out.view(batch_size, seq_len, self.output_dim)
+
         return output
 
     def loss(self, output, label):
-        # [TODO] test out different loss functions
+        # [TODO] figure out how to structure the loss function
         # cross_entropy = nn.CrossEntropyLoss()
         mse = nn.MSELoss()
         loss = mse(output, label)
