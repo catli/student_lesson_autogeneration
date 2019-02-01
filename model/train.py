@@ -20,41 +20,41 @@ import pdb
 
 
 
-def train_and_evaluate(model, train_data, val_data,
+def train_and_evaluate(model, full_data, train_keys, val_keys,
         optimizer, content_dim, threshold):
     best_vali_loss = None  # set a large number for validation loss at first
     best_vali_accu = 0
     epoch = 0
     training_loss_epoch = []
     eval_loss_epoch = []
-    max_epoch = 15 # PLACEHOLDER
+    max_epoch = 50 # PLACEHOLDER
     # training data on mini batch
     # [TODO] how to save the training data
-    train_keys = np.array([key for key in train_data.keys()])
-    train_data_index = torch.IntTensor(range(len(train_data)))
+    # train_keys = np.array([key for key in train_data.keys()])
+    train_data_index = torch.IntTensor(range(len(train_keys)))
     torch_train_data_index = Data.TensorDataset(train_data_index)
     train_loader = Data.DataLoader(dataset=torch_train_data_index,
-                    batch_size=batchsize, shuffle=True,
-                    num_workers=2, drop_last=True)
+                        batch_size=batchsize,
+                        num_workers=2,
+                        drop_last=True)
     # validation data on mini batch
-    val_keys = np.array([key for key in val_data.keys()])
-    val_data_index = torch.IntTensor(range(len(val_data)))
+    # val_keys = np.array([key for key in val_data.keys()])
+    val_data_index = torch.IntTensor(range(len(val_keys)))
     torch_val_data_index = Data.TensorDataset(val_data_index)
     val_loader = Data.DataLoader(dataset=torch_val_data_index,
-                batch_size=batchsize,
-                shuffle=True,
-                num_workers=2,
-                drop_last=True)
+                        batch_size=batchsize,
+                        num_workers=2,
+                        drop_last=True)
     while True:
         epoch += 1
         print('EPOCH %s:' %str(epoch))
-        train_loss = train(model, optimizer, train_loader, train_data,
+        train_loss = train(model, optimizer, full_data, train_loader,
                 train_keys, epoch, content_dim)
         training_loss_epoch.append(train_loss)
         print('The average loss of training set for the first %s epochs: %s ' %
                 (str(epoch),str(training_loss_epoch)))
         eval_loss, total_predicted, total_label, total_correct = evaluate_loss(
-            model, val_loader, val_data, val_keys, content_dim, threshold)
+            model, full_data, val_loader, val_keys, content_dim, threshold)
         eval_loss_epoch.append(eval_loss)
         # num_predicted, num_label, num_correct = evaluate_precision_and_recall(
         #     model, val_loader, val_data, val_keys, batchsize, content_dim, threshold)
@@ -72,7 +72,7 @@ def train_and_evaluate(model, train_data, val_data,
     # [TODO] once training complete write_prediction_sample
 
 
-def train(model, optimizer, loader, train_data,
+def train(model, optimizer, train_data, loader,
     train_keys, epoch, content_dim):
     # set in training node
     model.train()
@@ -82,7 +82,7 @@ def train(model, optimizer, loader, train_data,
         # convert token data to matrix
         # need to convert batch_x from tensor flow object to numpy array
         # before converting to matrix
-        input_padded, label_padded, seq_len = convert_token_to_matrix(
+        input_padded, label_padded, seq_lens = convert_token_to_matrix(
             batch_x[0].numpy(), train_data, train_keys, content_dim)
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
@@ -93,15 +93,14 @@ def train(model, optimizer, loader, train_data,
         # clear gradients and hidden state
         # [TODO] check why you need to init hidden layer
         optimizer.zero_grad()
-        #model.hidden = model.init_hidden()
-        #model.hidden[0] = model.hidden[0] #.cuda()
-        #model.hidden[1] = model.hidden[1]#.cuda()
+        # [TODO] model init not necessary if laready init in forward
+        model.hidden = model.init_hidden()
         # is this equivalent to generating prediction
         # what is the label generated?
-        y_pred = model(padded_input)#.cuda()
+        y_pred = model(padded_input, seq_lens)#.cuda()
         loss = model.loss(y_pred, padded_label)#.cuda()
         print('Epoch ' + str(epoch) + ': ' + 'The '+str(step+1)+'-th iteration: loss '+str(loss.data[0])+'\n')
-        loss.backward(retain_graph=True)
+        loss.backward()
         optimizer.step()
         # append the loss after converting back to numpy object from tensor
         train_loss.append(loss.data[0].numpy())
@@ -114,16 +113,16 @@ if __name__ == '__main__':
     # only consider grade higher than B or not, pass or not pass
 
     # set hyper parameters
-    nb_lstm_units = 1000
+    nb_lstm_units = 100
     nb_lstm_layers = 1
     batchsize = 2
     learning_rate = 0.001
     test_perc = 0.2
-    threshold = 0.5
+    threshold = 0.1
     exercise_filename = os.path.expanduser(
                 '~/sorted_data/khan_problem_token_3only_tiny')
     content_index_filename = 'data/exercise_index_3only'
-    train_data, val_data, _, content_dim = split_train_and_test_data(
+    train_keys, val_keys, full_data, content_dim = split_train_and_test_data(
                 exercise_filename, content_index_filename, test_perc)
     model = gru_model(input_dim = content_dim,
         output_dim = content_dim,
@@ -132,5 +131,5 @@ if __name__ == '__main__':
         batch_size = batchsize)
     # [TODO] consider whether to include weight decay
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    train_and_evaluate(model, train_data, val_data,
+    train_and_evaluate(model, full_data, train_keys, val_keys,
         optimizer, content_dim, threshold)

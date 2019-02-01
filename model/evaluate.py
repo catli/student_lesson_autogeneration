@@ -10,7 +10,7 @@ import pdb
 
 # for validation loss in early stopping
 
-def evaluate_loss(model, loader, val_data, val_keys, content_dim, threshold):
+def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold):
     # set in training node
     model.eval()
     val_loss = []
@@ -22,7 +22,7 @@ def evaluate_loss(model, loader, val_data, val_keys, content_dim, threshold):
         # convert token data to matrix
         # need to convert batch_x from tensor flow object to numpy array
         # before converting to matrix
-        input_padded, label_padded, seq_len = convert_token_to_matrix(
+        input_padded, label_padded, seq_lens = convert_token_to_matrix(
             batch_x[0].numpy(), val_data, val_keys, content_dim)
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
@@ -30,12 +30,12 @@ def evaluate_loss(model, loader, val_data, val_keys, content_dim, threshold):
         padded_input = Variable(torch.Tensor(input_padded), requires_grad=False)#.cuda()
         padded_label = Variable(torch.Tensor(label_padded), requires_grad=False)#.cuda()
         # clear gradients and hidden state
-        # model.hidden = model.init_hidden()
+        model.hidden = model.init_hidden()
         # model.hidden[0] = model.hidden[0]#.cuda()
         # model.hidden[1] = model.hidden[1]#.cuda()
         # is this equivalent to generating prediction
         # what is the label generated?
-        y_pred = model(padded_input)#.cuda()
+        y_pred = model(padded_input, seq_lens)#.cuda()
         loss = model.loss(y_pred, padded_label)#.cuda()
         # append the loss after converting back to numpy object from tensor
         val_loss.append(loss.data.numpy())
