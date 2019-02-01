@@ -9,13 +9,14 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-import torch.tensor as tensor
+from torch.autograd import Variable
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import json
 from torch.utils.data import sampler
+import torch.nn.utils as utils
 import random
 import pdb
 import time
@@ -45,10 +46,10 @@ class GRU_MODEL(nn.Module):
             earlier versions use "Variable" to initiate tensor
             variable
         '''
-        self.hidden_layer = tensor(torch.zeros(self.nb_lstm_layers,
+        self.hidden_layer = Variable(torch.zeros(self.nb_lstm_layers,
                     self.batch_size, self.nb_lstm_units))
 
-    def forward(self, batch_data):
+    def forward(self, batch_data, seq_lens):
         '''
             apply the forward function for the model
             clarifying with example from:
@@ -56,20 +57,21 @@ class GRU_MODEL(nn.Module):
             taming-lstms-variable-sized-mini-batches-and-why-pytorch-is-good-for-your-health-61d35642972e
         '''
         self.hidden = self.init_hidden()
-        batch_size, seq_len, _ = batch_data.size()
-        # check that the gru unit treats the s
+         # pack_padded_sequence so that 
+         # padded items in the sequence won't be shown
         packed_input = utils.rnn.pack_padded_sequence(
-            batch_data, seq_len, batch_first=True)
-        gru_out, self.hidden = self.model(batch_data, self.hidden)
-        unpacked_out = utils.rnn.pad_packed_sequence(gru_out, batch_first=True)
+            batch_data, seq_lens, batch_first=True)
+        # run through the GRU model
+        gru_out, _ = self.model(packed_input, self.hidden)
+        # undo packing operation
+        unpacked_out, _ = utils.rnn.pad_packed_sequence(gru_out, batch_first=True)
         # [TODO] check to see what this unpacking is doing
         unpacked_out = unpacked_out.contiguous()
-        unpacked_out = X.view(-1, unpacked_out.shape[2])
-        output = self.hidden_to_output(gru_out)
+        unpacked_out = unpacked_out.view(-1, unpacked_out.shape[2])
+        unpacked_out = self.hidden_to_output(unpacked_out)
         # Add a sigmoid layer
-        sigmoid_out = F.sigmoid(self.linear(output))
-        output = sigmoid_out.view(batch_size, seq_len, self.output_dim)
-
+        sigmoid_out = torch.sigmoid(unpacked_out)
+        output = sigmoid_out.view(self.batch_size, -1, self.output_dim)
         return output
 
     def loss(self, output, label):

@@ -2,6 +2,7 @@ import numpy as np
 import json
 from sklearn.model_selection import train_test_split
 import torch.nn.utils as utils
+import pdb
 
 
 def convert_token_to_matrix(batch_index, json_data, json_keys, content_num):
@@ -15,18 +16,20 @@ def convert_token_to_matrix(batch_index, json_data, json_keys, content_num):
     num_sess = []
     # max number of sessions in batch
     for student_index in batch_index:
-        student_key = json_keys[student_index]
-        num_sess.append(len(json_data[student_key].keys()))
-    max_seq = np.max(num_sess)
+        # return the key pairs (student_id, seq_len)
+        # and the first item of pair as student id
+        student_key = json_keys[student_index][0]
+        num_sess.append(len(json_data[student_key].keys())-1)
+    max_seq = np.max(num_sess) + 1
 
     # placeholder padded input, padded with additional sessions
     student_padded = np.zeros((batchsize, int(max_seq), content_num), int)
-    # padded label
-    # label_padded = np.zeros((batchsize, int(max_seq)-1, content_num), int)
 
+    # populate student_padded
     for stud_num, student_index in enumerate(batch_index):
-        # the number of columns = possible contents
-        student_key = json_keys[student_index]
+        # return the key pairs (student_id, seq_len)
+        # and the first item of pair as student id
+        student_key = json_keys[student_index][0]
         sessions = sorted(json_data[student_key].keys())
         for sess_num, session in enumerate(sessions):
             content_items = json_data[student_key][session]
@@ -37,29 +40,33 @@ def convert_token_to_matrix(batch_index, json_data, json_keys, content_num):
                 student_padded[stud_num, sess_num, exercise_id-1]=1
     input_padded = student_padded[:, :-1]
     label_padded = student_padded[:, 1:]
-    input_len = np.sum(input_padded, axis=2)
-    return input_padded, label_padded, input_len
+    # assign the number of sessions as sequence length for each student
+    # this will feed be used later to tell the model
+    # which sessions are padded
+    seq_lens = num_sess
+    return input_padded, label_padded, seq_lens
 
 
 def split_train_and_test_data(exercise_filename, content_index_filename,
-            test_perc):  # t==22, subtraining and validation; t==25, training and testing
+            test_perc):
     '''
         split the data into training and test by learners
     '''
     exercise_reader = open(exercise_filename, 'r')
-    sessions_exercise_json = json.load(exercise_reader)
+    full_data = json.load(exercise_reader)
     train_data = {}
     val_data = {}
-    train_ids, val_ids = split_train_and_test_ids(json_data = sessions_exercise_json
-                            , test_perc = test_perc)
-    for id in train_ids: train_data[id] = sessions_exercise_json[id]
-    for id in val_ids: val_data[id] = sessions_exercise_json[id]
+    ordered_train_keys, ordered_val_keys = split_train_and_test_ids(
+                        json_data = full_data,
+                        test_perc = test_perc)
+    # for id in train_ids: train_data[id] = sessions_exercise_json[id]
+    # for id in val_ids: val_data[id] = sessions_exercise_json[id]
     # [TODO] for count_content_num, consider moving this to train.py
     # to expose the json file
     index_reader = open(content_index_filename, 'r')
     exercise_to_index_map = json.load(index_reader)
     content_num = count_content_num(exercise_to_index_map)
-    return train_data, val_data, exercise_to_index_map, content_num
+    return ordered_train_keys, ordered_val_keys, full_data, content_num
 
 
 
@@ -71,7 +78,33 @@ def split_train_and_test_ids(json_data, test_perc):
     student_ids = [student for student in json_data]
     train_ids , val_ids = train_test_split(student_ids,
             test_size = 0.2)
-    return train_ids, val_ids
+    ordered_train_keys = create_ordered_sequence_list(train_ids, json_data)
+    ordered_val_keys = create_ordered_sequence_list(val_ids, json_data)
+    return ordered_train_keys, ordered_val_keys
+
+
+def create_ordered_sequence_list(set_ids, exercise_json):
+    '''
+        create ordered sequence length
+        will be used for batching to efficiently
+        run through the sequence ids
+    '''
+    key_seq_pair = create_key_seqlen_pair(set_ids, exercise_json)
+    key_seq_pair.sort(key = lambda x: x[1], reverse = True)
+    return key_seq_pair
+
+
+def create_key_seqlen_pair(set_ids, json_data):
+    '''
+        create a tuple with learner id and the sequence length,
+        i.e. number of sessions per learner
+            ('$fd@w', 4)
+    '''
+    key_seq_pair  = []
+    for id in set_ids:
+        seq_len = len(json_data[id])
+        key_seq_pair.append((id, seq_len))
+    return key_seq_pair
 
 
 def count_content_num(exercise_map):
