@@ -9,7 +9,7 @@
 from gru import GRU_MODEL as gru_model
 import torch
 import torch.nn as nn
-from process_data import split_train_and_test_data, convert_token_to_matrix
+from process_data import split_train_and_test_data, convert_token_to_matrix, extract_content_map
 from torch.autograd import Variable
 from evaluate import evaluate_loss #, evaluate_precision_and_recall
 import torch.utils.data as Data
@@ -21,7 +21,8 @@ import pdb
 
 
 def train_and_evaluate(model, full_data, train_keys, val_keys,
-        optimizer, content_dim, threshold):
+        optimizer, content_dim, threshold, output_sample_filename,
+        exercise_to_index_map):
     best_vali_loss = None  # set a large number for validation loss at first
     best_vali_accu = 0
     epoch = 0
@@ -29,8 +30,7 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
     eval_loss_epoch = []
     max_epoch = 50 # PLACEHOLDER
     # training data on mini batch
-    # [TODO] how to save the training data
-    # train_keys = np.array([key for key in train_data.keys()])
+    # [TODO] how to save the training model
     train_data_index = torch.IntTensor(range(len(train_keys)))
     torch_train_data_index = Data.TensorDataset(train_data_index)
     train_loader = Data.DataLoader(dataset=torch_train_data_index,
@@ -38,7 +38,6 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
                         num_workers=2,
                         drop_last=True)
     # validation data on mini batch
-    # val_keys = np.array([key for key in val_data.keys()])
     val_data_index = torch.IntTensor(range(len(val_keys)))
     torch_val_data_index = Data.TensorDataset(val_data_index)
     val_loader = Data.DataLoader(dataset=torch_val_data_index,
@@ -54,7 +53,8 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
         print('The average loss of training set for the first %s epochs: %s ' %
                 (str(epoch),str(training_loss_epoch)))
         eval_loss, total_predicted, total_label, total_correct = evaluate_loss(
-            model, full_data, val_loader, val_keys, content_dim, threshold)
+            model, full_data, val_loader, val_keys, content_dim, threshold,
+            output_sample_filename, epoch, max_epoch, exercise_to_index_map)
         eval_loss_epoch.append(eval_loss)
         # num_predicted, num_label, num_correct = evaluate_precision_and_recall(
         #     model, val_loader, val_data, val_keys, batchsize, content_dim, threshold)
@@ -121,9 +121,12 @@ if __name__ == '__main__':
     threshold = 0.1
     exercise_filename = os.path.expanduser(
                 '~/sorted_data/khan_problem_token_3only_tiny')
+    output_sample_filename = os.path.expanduser(
+                '~/sorted_data/sample_sessions/sample_prediction_generated')
     content_index_filename = 'data/exercise_index_3only'
     train_keys, val_keys, full_data, content_dim = split_train_and_test_data(
                 exercise_filename, content_index_filename, test_perc)
+    exercise_to_index_map, content_dim = extract_content_map(content_index_filename)
     model = gru_model(input_dim = content_dim,
         output_dim = content_dim,
         nb_lstm_layers = nb_lstm_layers,
@@ -132,4 +135,5 @@ if __name__ == '__main__':
     # [TODO] consider whether to include weight decay
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     train_and_evaluate(model, full_data, train_keys, val_keys,
-        optimizer, content_dim, threshold)
+        optimizer, content_dim, threshold,
+        output_sample_filename, exercise_to_index_map)

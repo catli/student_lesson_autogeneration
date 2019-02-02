@@ -75,8 +75,7 @@ class GRU_MODEL(nn.Module):
         return output
 
     def loss(self, output, label):
-        # [TODO] figure out how to structure the loss function
-        # cross_entropy = nn.CrossEntropyLoss()
+        # [TODO] figure out how to improve the loss function
         mse = nn.MSELoss()
         loss = mse(output, label)
         return loss
