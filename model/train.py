@@ -50,21 +50,23 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
         epoch += 1
         print('EPOCH %s:' %str(epoch))
         train_loss = train(model, optimizer, full_data, train_loader,
-                train_keys, epoch, content_dim, file_affix)
+                train_keys, epoch, content_dim)
         training_loss_epoch.append(train_loss)
         print('The average loss of training set for the first %s epochs: %s ' %
                 (str(epoch),str(training_loss_epoch)))
-        eval_loss, total_predicted, total_label, total_correct = evaluate_loss(
-            model, full_data, val_loader, val_keys, content_dim, threshold,
-            output_sample_filename, epoch, max_epoch,
-            exercise_to_index_map, perc_sample_print)
+        eval_loss, total_predicted, total_label, total_correct, \
+            total_no_predicted, total_sessions = evaluate_loss(
+                model, full_data, val_loader, val_keys, content_dim, threshold,
+                output_sample_filename, epoch, max_epoch,
+                exercise_to_index_map, perc_sample_print)
         eval_loss_epoch.append(eval_loss)
         # num_predicted, num_label, num_correct = evaluate_precision_and_recall(
         #     model, val_loader, val_data, val_keys, batchsize, content_dim, threshold)
         # [TODO] write precision and recall to output file
-        epoch_result = 'Epoch test: %d / %d  precision and %d / %d  recall' % (
-                total_correct, total_predicted,
-                total_correct, total_label)
+        epoch_result = 'Epoch %d test: %d / %d  precision \
+                    and %d / %d  recall with %d / %d no prediction sess \n' % (
+                epoch, total_correct, total_predicted,
+                total_correct, total_label, total_no_predicted, total_sessions)
         result_writer.write(epoch_result)
         # print('Epoch test: %d / %d = %f precision and %d / %d = %f recall' % (
         #         total_correct, total_predicted, total_correct/total_predicted,
@@ -72,11 +74,12 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
         if epoch >= max_epoch:
             # [TODO] consider adding an early stopping logic
             break
-    # [TODO] once training complete write_prediction_sample
+    # plot loss
+    plot_loss(training_loss_epoch, file_affix)
 
 
 def train(model, optimizer, train_data, loader,
-    train_keys, epoch, content_dim, file_affix):
+    train_keys, epoch, content_dim):
     # set in training node
     model.train()
     train_loss = []
@@ -107,8 +110,6 @@ def train(model, optimizer, train_data, loader,
         optimizer.step()
         # append the loss after converting back to numpy object from tensor
         train_loss.append(loss.data[0].numpy())
-    # plot loss
-    plot_loss(train_loss, file_affix)
     average_loss = np.mean(train_loss)
     return average_loss
 
@@ -116,7 +117,7 @@ def train(model, optimizer, train_data, loader,
 def plot_loss(loss_trend, file_affix):
      # visualize the loss
     write_filename = os.path.expanduser('~/sorted_data/output/loss_plot_' +
-                        file_affix)
+                        file_affix + '.jpg')
     plt.plot(range(len(loss_trend)), loss_trend, 'r--')
     plt.savefig(write_filename)
 
@@ -153,8 +154,8 @@ if __name__ == '__main__':
     content_index_filename = loaded_params['content_index_filename']
     file_affix = 'unit' + str(nb_lstm_units) + \
                 'layer' + str(nb_lstm_layers) + \
-                'bsize'+ str(batchsize) + \
-                'thresh' + str(threshold) + \
+                'bsize'+ str(batchsize).replace('.','') + \
+                'thresh' + str(threshold).replace('.','') + \
                 '_'+str(data_name)
     train_keys, val_keys, full_data, content_dim = split_train_and_test_data(
                 exercise_filename, content_index_filename, test_perc)

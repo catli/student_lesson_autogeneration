@@ -21,6 +21,8 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
     total_predicted = 0
     total_label = 0
     total_correct = 0
+    total_no_predicted = 0
+    total_sessions = 0
     for step, batch_x in enumerate(loader):  # batch_x: index of batch data
         print('Evaluate Loss | Iteration: ', step+1)
         # convert token data to matrix
@@ -43,27 +45,37 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         val_loss.append(loss.data.numpy())
         threshold_output, correct_ones = find_correct_predictions(
             y_pred, padded_label, threshold)#.cuda()
-        threshold_output = mask_padded_errors(threshold_output, seq_lens)
+        threshold_output, num_no_pred = mask_padded_errors(threshold_output, seq_lens)
         if (random.random()<=perc_sample_print) | (epoch==max_epoch):
             writer_sample_outut(output_sample_filename, epoch, step,
                     threshold_output, padded_label, correct_ones,
                     exercise_to_index_map)
+        total_predicted += len(torch.nonzero(threshold_output))
+        total_label += len(torch.nonzero(padded_label))
+        total_correct += len(torch.nonzero(correct_ones))
+        total_no_predicted += num_no_pred
+        total_sessions += np.sum(seq_lens)
     average_loss = np.mean(val_loss)
-    total_predicted += len(torch.nonzero(threshold_output))
-    total_label = len(torch.nonzero(padded_label))
     # of label=1 that were predicted accurately
-    total_correct += len(torch.nonzero(correct_ones))
-    return average_loss, total_predicted, total_label, total_correct
+    return average_loss, total_predicted, total_label, \
+        total_correct, total_no_predicted, total_sessions
 
 
 def mask_padded_errors(threshold_output, seq_lens):
+    num_no_pred = 0
     for i, output in enumerate(threshold_output):
         # the full size of threshold
         num_sess = threshold_output[i].shape[0]
         seq_len = seq_lens[i]
+        # calculate the number of sessions with no prediction
+        sess_with_pred = np.sum(
+            threshold_output[i][:seq_len,].detach().numpy(),
+            axis=1)
+        num_no_pred += int(np.sum(sess_with_pred == 0))
+        threshold_output[i][:seq_len,]
         for sess_i in range(seq_len, num_sess):
             threshold_output[i][sess_i] = 0
-    return threshold_output
+    return threshold_output, num_no_pred
 
 def find_correct_predictions(output, label, threshold):
     '''
