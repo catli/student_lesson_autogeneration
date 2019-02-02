@@ -10,7 +10,6 @@ import time
 import os
 
 
-
 class CreateUniformData():
 
     def __init__(self, read_filename,  subject):
@@ -25,7 +24,7 @@ class CreateUniformData():
             iterate through exercise file and create the set of
             learners who spent time on subject
         '''
-        reader = open(self.read_filename,'r')
+        reader = open(self.read_filename, 'r')
         print('iterate to find learners')
         first_line = reader.readline().strip()
         col_names = first_line.split(',')
@@ -38,22 +37,22 @@ class CreateUniformData():
             line_subject = line_delimited[exercise_loc]
             sha_id = line_delimited[shaid_loc]
             if line_subject == self.subject:
-                 self.subject_learner.add(sha_id)
+                self.subject_learner.add(sha_id)
             # print counter
-            counter+=1
+            counter += 1
             if counter % 1000000 == 0:
                 print(counter)
         reader.close()
 
     def write_uniform_file(self,
-        subjectlearner_filename, subjectonly_filename):
+                           subjectlearner_filename, subjectonly_filename):
         '''
             iterate through file again
             and write two new files
             <filename>_<subject>learner: contains all learners who spent time on that subject
             <filename>_<subject>only: contain only the learning records with that subject
         '''
-        reader = open(self.read_filename,'r')
+        reader = open(self.read_filename, 'r')
         subjectlearner_writer = open(subjectlearner_filename, 'w')
         subjectonly_writer = open(subjectonly_filename, 'w')
         print('iterate through exercise')
@@ -70,11 +69,11 @@ class CreateUniformData():
             line_subject = line_delimited[exercise_loc]
             sha_id = line_delimited[shaid_loc]
             if line_subject == self.subject:
-                 subjectonly_writer.writelines(line)
+                subjectonly_writer.writelines(line)
             if sha_id in self.subject_learner:
                 subjectlearner_writer.writelines(line)
             # print counter
-            counter+=1
+            counter += 1
             if counter % 1000000 == 0:
                 print(counter)
         reader.close()
@@ -83,26 +82,24 @@ class CreateUniformData():
 def main():
     subject = 'cc-third-grade-math'
     # full read file
-    read_filename =  os.path.expanduser('~/sorted_data/khan_data_all_sorted.csv')
-    # testing read file
-    # read_filename =  os.path.expanduser('~/sorted_data/khan_data_small.csv')
+    read_filename = os.path.expanduser(
+        '~/sorted_data/khan_data_all_sorted.csv')
     uniform_data = CreateUniformData(read_filename, subject)
     uniform_data.find_all_subject_learners()
 
     # write files for learners and lines in subject set
-    subjectlearner_filename = os.path.expanduser('~/sorted_data/khan_data_subjectlearner.csv')
-    print(subjectlearner_filename) 
-    subjectonly_filename = os.path.expanduser('~/sorted_data/khan_data_subjectonly.csv')
-    print(subjectonly_filename) 
-    uniform_data.write_uniform_file(subjectlearner_filename = subjectlearner_filename,
-                    subjectonly_filename = subjectonly_filename)
+    subjectlearner_filename = os.path.expanduser(
+        '~/sorted_data/khan_data_subjectlearner.csv')
+    print(subjectlearner_filename)
+    subjectonly_filename = os.path.expanduser(
+        '~/sorted_data/khan_data_subjectonly.csv')
+    print(subjectonly_filename)
+    uniform_data.write_uniform_file(subjectlearner_filename=subjectlearner_filename,
+                                    subjectonly_filename=subjectonly_filename)
 
 
 if __name__ == '__main__':
-    start = time.time() 
+    start = time.time()
     main()
-    end =time.time()
+    end = time.time()
     print(end-start)
-
-
-

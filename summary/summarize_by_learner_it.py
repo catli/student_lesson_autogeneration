@@ -5,16 +5,14 @@ import csv
 import time
 
 
-
 class SummarizeLearner():
 
-    def __init__(self, read_filename = '', write_filename = ''):
-        print('initialize '+ read_filename)
-        self.reader = open(read_filename,'r')        
+    def __init__(self, read_filename='', write_filename=''):
+        print('initialize ' + read_filename)
+        self.reader = open(read_filename, 'r')
         self.user_attempts = {}
         self.write_user_data = {}
         self.last_sha_id = 'sha_id'
-
 
     def iterate_through_lines(self):
         '''
@@ -23,7 +21,6 @@ class SummarizeLearner():
             it would be great helpful to parallelize this function but
             not sure how to efficiently do this and maintain the sort order 
         '''
-
 
         first_line = self.reader.readline().strip()
         col_names = first_line.split(',')
@@ -49,34 +46,34 @@ class SummarizeLearner():
             outgoing_level = line_delimited[outgoing_level_loc]
             # read each line
             self.parse_line(sha_id, session,  attempt, correct,
-                    hint, subject, topic, outgoing_level)
-            counter+=1
+                            hint, subject, topic, outgoing_level)
+            counter += 1
             if counter % 1000000 == 0:
                 print(counter)
         self.reader.close()
 
     def parse_line(self, sha_id, session,  attempt, correct,
-        hint, subject, topic, outgoing_level):
+                   hint, subject, topic, outgoing_level):
         '''
            Parse through each line and store the values 
         '''
-        if self.last_sha_id=='sha_id':
+        if self.last_sha_id == 'sha_id':
             self.last_sha_id = sha_id
             self.user_attempts = {}
             self.update_attempts(session,  attempt, correct,
-                    hint, subject, topic, outgoing_level)
-        elif (sha_id!=self.last_sha_id) and (self.last_sha_id!='sha_id'):
+                                 hint, subject, topic, outgoing_level)
+        elif (sha_id != self.last_sha_id) and (self.last_sha_id != 'sha_id'):
             self.summarize_user_data()
             self.last_sha_id = sha_id
             self.user_attempts = {}
             self.update_attempts(session,  attempt, correct,
-                    hint, subject, topic, outgoing_level)
+                                 hint, subject, topic, outgoing_level)
         else:
             self.update_attempts(session,  attempt, correct,
-                    hint, subject, topic, outgoing_level)
+                                 hint, subject, topic, outgoing_level)
 
     def update_attempts(self, session,  attempt, correct,
-        hint, subject, topic, outgoing_level):
+                        hint, subject, topic, outgoing_level):
         '''
             update the session meta-data
         '''
@@ -121,24 +118,24 @@ class SummarizeLearner():
             num_subject += len(user_attempts[session]['subject'])
             num_topic += len(user_attempts[session]['topic'])
             num_practiced += ('practiced' in
-                    user_attempts[session]['outgoing_level'])
+                              user_attempts[session]['outgoing_level'])
             num_mastery1 += ('mastery1' in
-                    user_attempts[session]['outgoing_level'])
+                             user_attempts[session]['outgoing_level'])
             num_mastery2 += ('mastery2' in
-                    user_attempts[session]['outgoing_level'])
+                             user_attempts[session]['outgoing_level'])
             num_mastery3 += ('mastery3' in
-                    user_attempts[session]['outgoing_level'])
+                             user_attempts[session]['outgoing_level'])
         self.store_user_data(
             sha_id, num_sessions, num_content,
             num_attempts, num_correct, num_hint,  num_subject, num_topic,
             num_practiced, num_mastery1, num_mastery2, num_mastery3)
 
     def store_user_data(self, sha_id, num_sessions, num_content,
-            num_attempts, num_correct, num_hint,  num_subject, num_topic,
-            num_practiced, num_mastery1, num_mastery2, num_mastery3):
+                        num_attempts, num_correct, num_hint,  num_subject, num_topic,
+                        num_practiced, num_mastery1, num_mastery2, num_mastery3):
         # find percentage metric
-        max_session_content = np.max( [self.user_attempts[session]['problem']
-             for session in self.user_attempts ])
+        max_session_content = np.max([self.user_attempts[session]['problem']
+                                      for session in self.user_attempts])
         perc_correct = num_correct/float(num_content)
         avg_attempts = num_attempts/float(num_content)
         avg_hint = num_hint/float(num_sessions)
@@ -164,11 +161,9 @@ class SummarizeLearner():
             perc_session_mastery3
         ]
 
-
-
     def write_data(self, write_filename):
         # print(self.writefile)
-        with open(write_filename,'w') as writefile:
+        with open(write_filename, 'w') as writefile:
             csvwriter = csv.writer(writefile)
             csvwriter.writerow([
                 'sha_id',
@@ -192,17 +187,18 @@ class SummarizeLearner():
 
 
 def main():
-    read_file = os.path.expanduser( 
+    read_file = os.path.expanduser(
         '~/sorted_data/khan_data_sorted.csv')
     write_file = os.path.expanduser(
         '~/sorted_data/summarize_khan_data_bylearner_it.csv')
-    learner_data = SummarizeLearner(read_filename = read_file,
-            write_filename = write_file)
+    learner_data = SummarizeLearner(read_filename=read_file,
+                                    write_filename=write_file)
     learner_data.iterate_through_lines()
-    learner_data.write_data(write_filename = write_file)
+    learner_data.write_data(write_filename=write_file)
+
 
 if __name__ == '__main__':
-    start = time.time() 
+    start = time.time()
     main()
-    end =time.time()
+    end = time.time()
     print(end-start)

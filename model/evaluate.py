@@ -11,8 +11,9 @@ import pdb
 
 # for validation loss in early stopping
 
+
 def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
-        output_sample_filename, epoch, max_epoch, exercise_to_index_map, perc_sample_print):
+                  output_sample_filename, epoch, max_epoch, exercise_to_index_map, perc_sample_print):
     # set in training node
     # perc_sample_print = 0.05 # set the percent sample
 
@@ -33,23 +34,26 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
-        padded_input = Variable(torch.Tensor(input_padded), requires_grad=False)#.cuda()
-        padded_label = Variable(torch.Tensor(label_padded), requires_grad=False)#.cuda()
+        padded_input = Variable(torch.Tensor(
+            input_padded), requires_grad=False)  # .cuda()
+        padded_label = Variable(torch.Tensor(
+            label_padded), requires_grad=False)  # .cuda()
         # clear gradients and hidden state
         model.hidden = model.init_hidden()
         # is this equivalent to generating prediction
         # what is the label generated?
-        y_pred = model(padded_input, seq_lens)#.cuda()
-        loss = model.loss(y_pred, padded_label)#.cuda()
+        y_pred = model(padded_input, seq_lens)  # .cuda()
+        loss = model.loss(y_pred, padded_label)  # .cuda()
         # append the loss after converting back to numpy object from tensor
         val_loss.append(loss.data.numpy())
         threshold_output, correct_ones = find_correct_predictions(
-            y_pred, padded_label, threshold)#.cuda()
-        threshold_output, num_no_pred = mask_padded_errors(threshold_output, seq_lens)
-        if (random.random()<=perc_sample_print) | (epoch==max_epoch):
+            y_pred, padded_label, threshold)  # .cuda()
+        threshold_output, num_no_pred = mask_padded_errors(
+            threshold_output, seq_lens)
+        if (random.random() <= perc_sample_print) | (epoch == max_epoch):
             writer_sample_outut(output_sample_filename, epoch, step,
-                    threshold_output, padded_label, correct_ones,
-                    exercise_to_index_map)
+                                threshold_output, padded_label, correct_ones,
+                                exercise_to_index_map)
         total_predicted += len(torch.nonzero(threshold_output))
         total_label += len(torch.nonzero(padded_label))
         total_correct += len(torch.nonzero(correct_ones))
@@ -69,13 +73,14 @@ def mask_padded_errors(threshold_output, seq_lens):
         seq_len = seq_lens[i]
         # calculate the number of sessions with no prediction
         sess_with_pred = np.sum(
-            threshold_output[i][:seq_len,].detach().numpy(),
+            threshold_output[i][:seq_len, ].detach().numpy(),
             axis=1)
         num_no_pred += int(np.sum(sess_with_pred == 0))
-        threshold_output[i][:seq_len,]
+        threshold_output[i][:seq_len, ]
         for sess_i in range(seq_len, num_sess):
             threshold_output[i][sess_i] = 0
     return threshold_output, num_no_pred
+
 
 def find_correct_predictions(output, label, threshold):
     '''
@@ -94,19 +99,10 @@ def find_correct_predictions(output, label, threshold):
     incorrect_ones = F.threshold(predict_diff, 0.999, 0)
     correct_ones = label - incorrect_ones
     return threshold_output, correct_ones
-    # num_incorrect = len(torch.nonzero(incorrect_ones))
-    # if num_incorrect>0:
-    #     pdb.set_trace
-    # # all incorrect prediction would be greater than 0
-    # num_predicted = len(torch.nonzero(threshold_output))
-    # num_label = len(torch.nonzero(label))
-    # num_correct = num_label - num_incorrect
-    # return num_predicted, num_label, num_correct
-
 
 
 def writer_sample_outut(output_sample_filename, epoch, step,
-       threshold_output, padded_label, correct_ones, exercise_to_index_map):
+                        threshold_output, padded_label, correct_ones, exercise_to_index_map):
     '''
         Randomly sample batches, and students with each batch
         to write data
@@ -121,11 +117,12 @@ def writer_sample_outut(output_sample_filename, epoch, step,
         prediction = threshold_output[i]
         correct = correct_ones[i]
         write_student_sample(step_writer, student,
-             actual, prediction, correct, index_to_exercise_map)
+                             actual, prediction, correct, index_to_exercise_map)
     step_writer.close()
 
+
 def write_student_sample(sample_writer, student,
-    actual, prediction, correct, index_to_content_map):
+                         actual, prediction, correct, index_to_content_map):
     '''
         print readable prediciton sample
         for input, output, label expect a matrix that's already
@@ -133,17 +130,20 @@ def write_student_sample(sample_writer, student,
     '''
     for i, label in enumerate(actual):
         # pass over the first one, no prediction made
-        if i==0:
+        if i == 0:
             continue
-        readable_input = create_readable_list(actual[i-1], index_to_content_map)
-        readable_output = create_readable_list(prediction[i], index_to_content_map)
+        readable_input = create_readable_list(
+            actual[i-1], index_to_content_map)
+        readable_output = create_readable_list(
+            prediction[i], index_to_content_map)
         readable_label = create_readable_list(label, index_to_content_map)
-        readable_correct = create_readable_list(correct[i], index_to_content_map)
+        readable_correct = create_readable_list(
+            correct[i], index_to_content_map)
         sample_writer.write(student + '\t' +
-                str(readable_input) + '\t' +
-                str(readable_output) + '\t' +
-                str(readable_label) + '\t' +
-                str(readable_correct) + '\n')
+                            str(readable_input) + '\t' +
+                            str(readable_output) + '\t' +
+                            str(readable_label) + '\t' +
+                            str(readable_correct) + '\n')
 
 
 def create_readable_list(vect, index_to_content_map):
@@ -151,7 +151,7 @@ def create_readable_list(vect, index_to_content_map):
        create the readable list of cotent
     '''
     content = []
-    indices = np.where(vect >0.01)[0]
+    indices = np.where(vect > 0.01)[0]
     for index in indices:
         content.append(index_to_content_map[index+1])
     return content
@@ -166,4 +166,3 @@ def create_index_to_content_map(content_index):
         index = content_index[content]
         index_to_content_map[index] = content
     return index_to_content_map
-
