@@ -104,12 +104,13 @@ def run_model(model, train_data, content_index,
                 print('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f'
                       % (epoch+1, num_epochs, i+1, len(train_data), loss.data))
         # print how the % correct on test change with each step
-        corrects, predictions, labels = validate_model(
+        corrects, predictions, labels, total_no_pred, total_sess = validate_model(
             model, test_data, content_index, threshold,
             sample_filename='data/none', perc_sample_print=0)
-        print('Epoch test: %d / %d = %f precision and %d / %d = %f recall' % (
+        print('Epoch test: %d / %d = %f precision and %d / %d = %f recall %d /%d no pred sess'  % (
             corrects, predictions, corrects/predictions,
-            corrects, labels, corrects/labels))
+            corrects, labels, corrects/labels,
+            total_no_pred, total_sess))
         loss_trend.append(total_epoch_loss)
         print(total_epoch_loss)
     print('# of students: %d' % (i*batch_size))
@@ -132,6 +133,8 @@ def validate_model(model, test_data, content_index, threshold, sample_filename,
     total_correct = 0.0
     total_predicted = 0.0
     total_label = 0.0
+    total_no_pred = 0.0
+    total_sess = 0.0
     sample_writer = open(sample_filename, 'w')
     for student in test_data:
         val_input_mat_lag, val_label_mat, val_input_mat = segment_input_label_data(
@@ -144,7 +147,7 @@ def validate_model(model, test_data, content_index, threshold, sample_filename,
         val_output = model(val_input_mat_lag)
         # validate test output
         # if input_matrix lagged, make sure to input the unlagged values
-        num_correct, num_predicted, num_label = validate_test_output(
+        num_correct, num_predicted, num_label, num_no_pred, num_sess = validate_test_output(
             sample_writer=sample_writer,
             student=student,
             input=val_input_mat,
@@ -157,7 +160,9 @@ def validate_model(model, test_data, content_index, threshold, sample_filename,
         total_correct += num_correct
         total_predicted += num_predicted
         total_label += num_label
-    return total_correct, total_predicted, total_label
+        total_no_pred += num_no_pred
+        total_sess += num_sess
+    return total_correct, total_predicted, total_label, total_no_pred, total_sess
 
 
 def create_training_batch(train_data, batch_size):
@@ -280,7 +285,11 @@ def validate_test_output(sample_writer, student,
     num_correct = np.sum(np.array(correct_prediction.detach()))
     num_predicted = np.sum(np.array(output_ones.detach()))
     num_label = np.sum(np.array(label_ones.detach()))
-    return num_correct, num_predicted, num_label
+    # calculate the number of sessions with no prediction
+    sess_with_pred = np.sum(output_ones.detach().numpy(),axis=1)
+    num_no_pred = int(np.sum(sess_with_pred == 0))
+    num_sess = len(sess_with_pred)
+    return num_correct, num_predicted, num_label, num_no_pred, num_sess
 
 
 def write_prediction_sample(sample_writer,
