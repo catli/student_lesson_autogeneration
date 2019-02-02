@@ -22,7 +22,6 @@ import pdb
 import time
 
 
-
 class GRU_MODEL(nn.Module):
     def __init__(self, input_dim, output_dim, nb_lstm_layers, nb_lstm_units, batch_size):
         super(GRU_MODEL, self).__init__()
@@ -31,13 +30,12 @@ class GRU_MODEL(nn.Module):
         self.nb_lstm_layers = nb_lstm_layers
         self.nb_lstm_units = nb_lstm_units
         self.batch_size = batch_size
-        self.model = nn.GRU(input_size=self.input_dim, 
-                hidden_size=nb_lstm_units,
-                num_layers=nb_lstm_layers,
-                batch_first=True)
+        self.model = nn.GRU(input_size=self.input_dim,
+                            hidden_size=nb_lstm_units,
+                            num_layers=nb_lstm_layers,
+                            batch_first=True)
         self.hidden_to_output = nn.Linear(self.nb_lstm_units,
-            self.output_dim)
-
+                                          self.output_dim)
 
     def init_hidden(self):
         '''
@@ -47,7 +45,7 @@ class GRU_MODEL(nn.Module):
             variable
         '''
         self.hidden_layer = Variable(torch.zeros(self.nb_lstm_layers,
-                    self.batch_size, self.nb_lstm_units))
+                                                 self.batch_size, self.nb_lstm_units))
 
     def forward(self, batch_data, seq_lens):
         '''
@@ -56,15 +54,15 @@ class GRU_MODEL(nn.Module):
             towardsdatascience.com/\
             taming-lstms-variable-sized-mini-batches-and-why-pytorch-is-good-for-your-health-61d35642972e
         '''
-        self.hidden = self.init_hidden()
-         # pack_padded_sequence so that 
-         # padded items in the sequence won't be shown
+        # pack_padded_sequence so that
+        # padded items in the sequence won't be shown
         packed_input = utils.rnn.pack_padded_sequence(
             batch_data, seq_lens, batch_first=True)
         # run through the GRU model
         gru_out, _ = self.model(packed_input, self.hidden)
         # undo packing operation
-        unpacked_out, _ = utils.rnn.pad_packed_sequence(gru_out, batch_first=True)
+        unpacked_out, _ = utils.rnn.pad_packed_sequence(
+            gru_out, batch_first=True)
         # [TODO] check to see what this unpacking is doing
         unpacked_out = unpacked_out.contiguous()
         unpacked_out = unpacked_out.view(-1, unpacked_out.shape[2])
@@ -79,4 +77,3 @@ class GRU_MODEL(nn.Module):
         mse = nn.MSELoss()
         loss = mse(output, label)
         return loss
-
