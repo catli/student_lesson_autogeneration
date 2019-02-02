@@ -13,6 +13,7 @@ from process_data import split_train_and_test_data, convert_token_to_matrix, ext
 from torch.autograd import Variable
 from evaluate import evaluate_loss #, evaluate_precision_and_recall
 import torch.utils.data as Data
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import json
@@ -22,7 +23,9 @@ import yaml
 
 def train_and_evaluate(model, full_data, train_keys, val_keys,
         optimizer, content_dim, threshold, output_sample_filename,
-        exercise_to_index_map, max_epoch, result_writer):
+        exercise_to_index_map, max_epoch, file_affix):
+    result_writer = open(
+        os.path.expanduser('~/sorted_data/output_' + file_affix), 'w')
     best_vali_loss = None  # set a large number for validation loss at first
     best_vali_accu = 0
     epoch = 0
@@ -47,7 +50,7 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
         epoch += 1
         print('EPOCH %s:' %str(epoch))
         train_loss = train(model, optimizer, full_data, train_loader,
-                train_keys, epoch, content_dim)
+                train_keys, epoch, content_dim, file_affix)
         training_loss_epoch.append(train_loss)
         print('The average loss of training set for the first %s epochs: %s ' %
                 (str(epoch),str(training_loss_epoch)))
@@ -72,7 +75,7 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
 
 
 def train(model, optimizer, train_data, loader,
-    train_keys, epoch, content_dim):
+    train_keys, epoch, content_dim, file_affix):
     # set in training node
     model.train()
     train_loss = []
@@ -103,9 +106,18 @@ def train(model, optimizer, train_data, loader,
         optimizer.step()
         # append the loss after converting back to numpy object from tensor
         train_loss.append(loss.data[0].numpy())
-
+    # plot loss
+    plot_loss(train_loss, file_affix)
     average_loss = np.mean(train_loss)
     return average_loss
+
+
+def plot_loss(loss_trend, file_affix):
+     # visualize the loss
+    write_filename = os.path.expanduser('~/sorted_data/output/loss_plot_' +
+                        file_affix)
+    plt.plot(range(len(loss_trend)), loss_trend, 'r--')
+    plt.savefig(write_filename)
 
 
 if __name__ == '__main__':
@@ -142,8 +154,6 @@ if __name__ == '__main__':
                 'bsize'+ str(batchsize) + \
                 'thresh' + str(threshold) + \
                 '_'+str(data_name)
-    result_writer = open(
-        os.path.expanduser('~/sorted_data/output_' + file_affix), 'w')
     train_keys, val_keys, full_data, content_dim = split_train_and_test_data(
                 exercise_filename, content_index_filename, test_perc)
     exercise_to_index_map, content_dim = extract_content_map(content_index_filename)
@@ -156,4 +166,4 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     train_and_evaluate(model, full_data, train_keys, val_keys,
         optimizer, content_dim, threshold,
-        output_sample_filename, exercise_to_index_map, max_epoch, result_writer)
+        output_sample_filename, exercise_to_index_map, max_epoch, file_affix)
