@@ -9,28 +9,30 @@
 from gru import GRU_MODEL as gru_model
 import torch
 import torch.nn as nn
-from process_data import split_train_and_test_data, convert_token_to_matrix
+from process_data import split_train_and_test_data, convert_token_to_matrix, extract_content_map
 from torch.autograd import Variable
 from evaluate import evaluate_loss #, evaluate_precision_and_recall
 import torch.utils.data as Data
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import json
 import pdb
-
+import yaml
 
 
 def train_and_evaluate(model, full_data, train_keys, val_keys,
-        optimizer, content_dim, threshold):
+        optimizer, content_dim, threshold, output_sample_filename,
+        exercise_to_index_map, max_epoch, file_affix, perc_sample_print):
+    result_writer = open(
+        os.path.expanduser('~/sorted_data/output_' + file_affix), 'w')
     best_vali_loss = None  # set a large number for validation loss at first
     best_vali_accu = 0
     epoch = 0
     training_loss_epoch = []
     eval_loss_epoch = []
-    max_epoch = 50 # PLACEHOLDER
     # training data on mini batch
-    # [TODO] how to save the training data
-    # train_keys = np.array([key for key in train_data.keys()])
+    # [TODO] how to save the training model
     train_data_index = torch.IntTensor(range(len(train_keys)))
     torch_train_data_index = Data.TensorDataset(train_data_index)
     train_loader = Data.DataLoader(dataset=torch_train_data_index,
@@ -38,7 +40,6 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
                         num_workers=2,
                         drop_last=True)
     # validation data on mini batch
-    # val_keys = np.array([key for key in val_data.keys()])
     val_data_index = torch.IntTensor(range(len(val_keys)))
     torch_val_data_index = Data.TensorDataset(val_data_index)
     val_loader = Data.DataLoader(dataset=torch_val_data_index,
@@ -53,23 +54,28 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
         training_loss_epoch.append(train_loss)
         print('The average loss of training set for the first %s epochs: %s ' %
                 (str(epoch),str(training_loss_epoch)))
-        eval_loss, total_predicted, total_label, total_correct = evaluate_loss(
-            model, full_data, val_loader, val_keys, content_dim, threshold)
+        eval_loss, total_predicted, total_label, total_correct, \
+            total_no_predicted, total_sessions = evaluate_loss(
+                model, full_data, val_loader, val_keys, content_dim, threshold,
+                output_sample_filename, epoch, max_epoch,
+                exercise_to_index_map, perc_sample_print)
         eval_loss_epoch.append(eval_loss)
         # num_predicted, num_label, num_correct = evaluate_precision_and_recall(
         #     model, val_loader, val_data, val_keys, batchsize, content_dim, threshold)
         # [TODO] write precision and recall to output file
-        print('Epoch test: %d / %d  precision and %d / %d  recall' % (
-                total_correct, total_predicted,
-                total_correct, total_label))
-
+        epoch_result = 'Epoch %d test: %d / %d  precision \
+                    and %d / %d  recall with %d / %d no prediction sess \n' % (
+                epoch, total_correct, total_predicted,
+                total_correct, total_label, total_no_predicted, total_sessions)
+        result_writer.write(epoch_result)
         # print('Epoch test: %d / %d = %f precision and %d / %d = %f recall' % (
         #         total_correct, total_predicted, total_correct/total_predicted,
         #         total_correct, total_label, total_correct/total_label))
         if epoch >= max_epoch:
             # [TODO] consider adding an early stopping logic
             break
-    # [TODO] once training complete write_prediction_sample
+    # plot loss
+    plot_loss(training_loss_epoch, file_affix)
 
 
 def train(model, optimizer, train_data, loader,
@@ -104,26 +110,56 @@ def train(model, optimizer, train_data, loader,
         optimizer.step()
         # append the loss after converting back to numpy object from tensor
         train_loss.append(loss.data[0].numpy())
-
     average_loss = np.mean(train_loss)
     return average_loss
+
+
+def plot_loss(loss_trend, file_affix):
+     # visualize the loss
+    write_filename = os.path.expanduser('~/sorted_data/output/loss_plot_' +
+                        file_affix + '.jpg')
+    plt.plot(range(len(loss_trend)), loss_trend, 'r--')
+    plt.savefig(write_filename)
 
 
 if __name__ == '__main__':
     # only consider grade higher than B or not, pass or not pass
 
     # set hyper parameters
-    nb_lstm_units = 100
-    nb_lstm_layers = 1
-    batchsize = 2
-    learning_rate = 0.001
-    test_perc = 0.2
-    threshold = 0.1
+    # nb_lstm_units = 100
+    # nb_lstm_layers = 1
+    # batchsize = 2
+    # learning_rate = 0.001
+    # test_perc = 0.2
+    # threshold = 0.1
+    # exercise_filename = os.path.expanduser(
+    #             '~/sorted_data/khan_problem_token_3only_tiny')
+    # output_sample_filename = os.path.expanduser(
+    #             '~/sorted_data/sample_sessions/sample_prediction_generated')
+    # content_index_filename = 'data/exercise_index_3only'
+    loaded_params = yaml.load( open('model_params.yaml','r'))
+    max_epoch = loaded_params['max_epoch']
+    nb_lstm_units = loaded_params['nb_lstm_units']
+    nb_lstm_layers = loaded_params['nb_lstm_layers']
+    batchsize = loaded_params['batchsize']
+    learning_rate = loaded_params['learning_rate']
+    test_perc = loaded_params['test_perc']
+    threshold = loaded_params['threshold']
+    data_name = loaded_params['data_name']
+    perc_sample_print = loaded_params['perc_sample_print']
     exercise_filename = os.path.expanduser(
-                '~/sorted_data/khan_problem_token_3only_tiny')
-    content_index_filename = 'data/exercise_index_3only'
+                loaded_params['exercise_filename'])
+    output_sample_filename = os.path.expanduser(
+                    loaded_params['output_sample_filename'])
+    content_index_filename = loaded_params['content_index_filename']
+    file_affix = 'unit' + str(nb_lstm_units) + \
+                'layer' + str(nb_lstm_layers) + \
+                'bsize'+ str(batchsize).replace('.','') + \
+                'thresh' + str(threshold).replace('.','') + \
+                '_'+str(data_name)
     train_keys, val_keys, full_data, content_dim = split_train_and_test_data(
                 exercise_filename, content_index_filename, test_perc)
+    exercise_to_index_map, content_dim = extract_content_map(content_index_filename)
     model = gru_model(input_dim = content_dim,
         output_dim = content_dim,
         nb_lstm_layers = nb_lstm_layers,
@@ -132,4 +168,6 @@ if __name__ == '__main__':
     # [TODO] consider whether to include weight decay
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     train_and_evaluate(model, full_data, train_keys, val_keys,
-        optimizer, content_dim, threshold)
+        optimizer, content_dim, threshold,
+        output_sample_filename, exercise_to_index_map, max_epoch, file_affix,
+        perc_sample_print)

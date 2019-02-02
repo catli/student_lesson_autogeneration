@@ -46,6 +46,15 @@ def convert_token_to_matrix(batch_index, json_data, json_keys, content_num):
     seq_lens = num_sess
     return input_padded, label_padded, seq_lens
 
+def extract_content_map(content_index_filename):
+    '''
+
+    '''
+    index_reader = open(content_index_filename, 'r')
+    exercise_to_index_map = json.load(index_reader)
+    content_num = count_content_num(exercise_to_index_map)
+    return exercise_to_index_map, content_num
+
 
 def split_train_and_test_data(exercise_filename, content_index_filename,
             test_perc):
