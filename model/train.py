@@ -23,7 +23,7 @@ import yaml
 
 def train_and_evaluate(model, full_data, train_keys, val_keys,
         optimizer, content_dim, threshold, output_sample_filename,
-        exercise_to_index_map, max_epoch, file_affix):
+        exercise_to_index_map, max_epoch, file_affix, perc_sample_print):
     result_writer = open(
         os.path.expanduser('~/sorted_data/output_' + file_affix), 'w')
     best_vali_loss = None  # set a large number for validation loss at first
@@ -56,7 +56,8 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
                 (str(epoch),str(training_loss_epoch)))
         eval_loss, total_predicted, total_label, total_correct = evaluate_loss(
             model, full_data, val_loader, val_keys, content_dim, threshold,
-            output_sample_filename, epoch, max_epoch, exercise_to_index_map)
+            output_sample_filename, epoch, max_epoch,
+            exercise_to_index_map, perc_sample_print)
         eval_loss_epoch.append(eval_loss)
         # num_predicted, num_label, num_correct = evaluate_precision_and_recall(
         #     model, val_loader, val_data, val_keys, batchsize, content_dim, threshold)
@@ -144,6 +145,7 @@ if __name__ == '__main__':
     test_perc = loaded_params['test_perc']
     threshold = loaded_params['threshold']
     data_name = loaded_params['data_name']
+    perc_sample_print = loaded_params['perc_sample_print']
     exercise_filename = os.path.expanduser(
                 loaded_params['exercise_filename'])
     output_sample_filename = os.path.expanduser(
@@ -166,4 +168,5 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     train_and_evaluate(model, full_data, train_keys, val_keys,
         optimizer, content_dim, threshold,
-        output_sample_filename, exercise_to_index_map, max_epoch, file_affix)
+        output_sample_filename, exercise_to_index_map, max_epoch, file_affix,
+        perc_sample_print)

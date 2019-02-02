@@ -12,9 +12,9 @@ import pdb
 # for validation loss in early stopping
 
 def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
-        output_sample_filename, epoch, max_epoch, exercise_to_index_map):
+        output_sample_filename, epoch, max_epoch, exercise_to_index_map, perc_sample_print):
     # set in training node
-    perc_sample_print = 0.05 # set the percent sample
+    # perc_sample_print = 0.05 # set the percent sample
 
     model.eval()
     val_loss = []
