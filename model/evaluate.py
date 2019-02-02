@@ -125,8 +125,6 @@ def write_student_sample(sample_writer, student,
             continue
         readable_input = create_readable_list(actual[i-1], index_to_content_map)
         readable_output = create_readable_list(prediction[i], index_to_content_map)
-        print(student + 'i')
-        print(readable_output)
         readable_label = create_readable_list(label, index_to_content_map)
         readable_correct = create_readable_list(correct[i], index_to_content_map)
         sample_writer.write(student + '\t' +

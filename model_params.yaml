@@ -1,0 +1,11 @@
+max_epoch: 50
+nb_lstm_units: 100
+nb_lstm_layers: 1
+batchsize: 2
+learning_rate: 0.001
+test_perc: 0.2
+threshold: 0.1
+data_name: '3onlytiny'
+exercise_filename: '~/sorted_data/khan_problem_token_3only_tiny'
+output_sample_filename: '~/sorted_data/sample_sessions/sample_prediction_generated'
+content_index_filename: 'data/exercise_index_3only'
