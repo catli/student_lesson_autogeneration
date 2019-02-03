@@ -23,7 +23,8 @@ import yaml
 
 def train_and_evaluate(model, full_data, train_keys, val_keys,
                        optimizer, content_dim, threshold, output_sample_filename,
-                       exercise_to_index_map, max_epoch, file_affix, perc_sample_print):
+                       exercise_to_index_map, max_epoch, file_affix, perc_sample_print,
+                       include_correct):
     result_writer = open(
         os.path.expanduser('~/sorted_data/output_' + file_affix), 'w')
     best_vali_loss = None  # set a large number for validation loss at first
@@ -50,15 +51,15 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
         epoch += 1
         print('EPOCH %s:' % str(epoch))
         train_loss = train(model, optimizer, full_data, train_loader,
-                           train_keys, epoch, content_dim)
+                           train_keys, epoch, content_dim, include_correct)
         training_loss_epoch.append(train_loss)
         print('The average loss of training set for the first %s epochs: %s ' %
               (str(epoch), str(training_loss_epoch)))
         eval_loss, total_predicted, total_label, total_correct, \
             total_no_predicted, total_sessions = evaluate_loss(
                 model, full_data, val_loader, val_keys, content_dim, threshold,
-                output_sample_filename, epoch, max_epoch,
-                exercise_to_index_map, perc_sample_print)
+                output_sample_filename, epoch, exercise_to_index_map,
+                perc_sample_print, include_correct)
         eval_loss_epoch.append(eval_loss)
         # num_predicted, num_label, num_correct = evaluate_precision_and_recall(
         #     model, val_loader, val_data, val_keys, batchsize, content_dim, threshold)
@@ -68,9 +69,7 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
             epoch, total_correct, total_predicted,
             total_correct, total_label, total_no_predicted, total_sessions)
         result_writer.write(epoch_result)
-        # print('Epoch test: %d / %d = %f precision and %d / %d = %f recall' % (
-        #         total_correct, total_predicted, total_correct/total_predicted,
-        #         total_correct, total_label, total_correct/total_label))
+        print(epoch_result)
         if epoch >= max_epoch:
             # [TODO] consider adding an early stopping logic
             break
@@ -79,7 +78,7 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
 
 
 def train(model, optimizer, train_data, loader,
-          train_keys, epoch, content_dim):
+          train_keys, epoch, content_dim, include_correct):
     # set in training node
     model.train()
     train_loss = []
@@ -89,7 +88,7 @@ def train(model, optimizer, train_data, loader,
         # need to convert batch_x from tensor flow object to numpy array
         # before converting to matrix
         input_padded, label_padded, seq_lens = convert_token_to_matrix(
-            batch_x[0].numpy(), train_data, train_keys, content_dim)
+            batch_x[0].numpy(), train_data, train_keys, content_dim, include_correct)
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
@@ -124,20 +123,7 @@ def plot_loss(loss_trend, file_affix):
 
 
 if __name__ == '__main__':
-    # only consider grade higher than B or not, pass or not pass
-
     # set hyper parameters
-    # nb_lstm_units = 100
-    # nb_lstm_layers = 1
-    # batchsize = 2
-    # learning_rate = 0.001
-    # test_perc = 0.2
-    # threshold = 0.1
-    # exercise_filename = os.path.expanduser(
-    #             '~/sorted_data/khan_problem_token_3only_tiny')
-    # output_sample_filename = os.path.expanduser(
-    #             '~/sorted_data/sample_sessions/sample_prediction_generated')
-    # content_index_filename = 'data/exercise_index_3only'
     loaded_params = yaml.load(open('model_params.yaml', 'r'))
     max_epoch = loaded_params['max_epoch']
     nb_lstm_units = loaded_params['nb_lstm_units']
@@ -148,21 +134,30 @@ if __name__ == '__main__':
     threshold = loaded_params['threshold']
     data_name = loaded_params['data_name']
     perc_sample_print = loaded_params['perc_sample_print']
+    include_correct = loaded_params['include_correct']
     exercise_filename = os.path.expanduser(
         loaded_params['exercise_filename'])
     output_sample_filename = os.path.expanduser(
         loaded_params['output_sample_filename'])
     content_index_filename = loaded_params['content_index_filename']
+    # creat ethe filename
     file_affix = 'unit' + str(nb_lstm_units) + \
         'layer' + str(nb_lstm_layers) + \
         'bsize' + str(batchsize).replace('.', '') + \
         'thresh' + str(threshold).replace('.', '') + \
         '_'+str(data_name)
-    train_keys, val_keys, full_data, content_dim = split_train_and_test_data(
+
+    train_keys, val_keys, full_data = split_train_and_test_data(
         exercise_filename, content_index_filename, test_perc)
     exercise_to_index_map, content_dim = extract_content_map(
         content_index_filename)
-    model = gru_model(input_dim=content_dim,
+    # if include perc correct in the input, then double dimensions
+    if include_correct:
+        input_dim = content_dim*2
+    else:
+        input_dim = content_dim
+
+    model = gru_model(input_dim=input_dim,
                       output_dim=content_dim,
                       nb_lstm_layers=nb_lstm_layers,
                       nb_lstm_units=nb_lstm_units,
@@ -172,4 +167,4 @@ if __name__ == '__main__':
     train_and_evaluate(model, full_data, train_keys, val_keys,
                        optimizer, content_dim, threshold,
                        output_sample_filename, exercise_to_index_map, max_epoch, file_affix,
-                       perc_sample_print)
+                       perc_sample_print, include_correct)

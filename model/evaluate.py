@@ -13,7 +13,8 @@ import pdb
 
 
 def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
-                  output_sample_filename, epoch, max_epoch, exercise_to_index_map, perc_sample_print):
+                  output_sample_filename, epoch, exercise_to_index_map,
+                  perc_sample_print, include_correct):
     # set in training node
     # perc_sample_print = 0.05 # set the percent sample
 
@@ -30,7 +31,7 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         # need to convert batch_x from tensor flow object to numpy array
         # before converting to matrix
         input_padded, label_padded, seq_lens = convert_token_to_matrix(
-            batch_x[0].numpy(), val_data, val_keys, content_dim)
+            batch_x[0].numpy(), val_data, val_keys, content_dim, include_correct)
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
@@ -50,7 +51,7 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
             y_pred, padded_label, threshold)  # .cuda()
         threshold_output, num_no_pred = mask_padded_errors(
             threshold_output, seq_lens)
-        if (random.random() <= perc_sample_print) | (epoch == max_epoch):
+        if (random.random() <= perc_sample_print):
             writer_sample_outut(output_sample_filename, epoch, step,
                                 threshold_output, padded_label, correct_ones,
                                 exercise_to_index_map)
@@ -128,6 +129,8 @@ def write_student_sample(sample_writer, student,
         for input, output, label expect a matrix that's already
         converted to ones where value above threshold set to 1
     '''
+    # [CORRECT TODO]: for the create readable list (actual), change index
+    #        if count added in and if % correct added (ignore percent)
     for i, label in enumerate(actual):
         # pass over the first one, no prediction made
         if i == 0:
