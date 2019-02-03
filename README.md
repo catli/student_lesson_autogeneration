@@ -48,4 +48,9 @@ The model is inspired by a couple of different pieces of work and the resources 
 
 [RNN for game generation](https://medium.com/@ageitgey/machine-learning-is-fun-part-2-a26a10b68df3)  
 [Deep Knowledge Tracing](https://web.stanford.edu/~cpiech/bio/papers/deepKnowledgeTracing.pdf)  
-[GRU Model] (https://arxiv.org/pdf/1406.1078.pdf)
+[GRU Model](https://arxiv.org/pdf/1406.1078.pdf)
+
+
+
+### Workstream
+[TODO: Add asana image of workstream]
