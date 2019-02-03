@@ -1,5 +1,5 @@
 # Student Lesson Autogeneration
-[Insight AI Fellowship Project] The purpose of this project is to explore approaches to auto-generate lessons for students learning on Khan Academy, a nonprofit educational website with thousands of free content. There are currently millions of individuals using Khan Academy, but because of the large variety of content and subjects available, students can easily lose track of how to progress through the product. The goal of this project is to try to learn optimal paths from prevous highly motivated students. To prediction uses Gate Recurrent Unit (GRU) model, a type of RNN, to predict optimal future session activities.  
+[*Insight AI Fellowship Project*] The purpose of this project is to explore approaches to auto-generate lessons for students learning on Khan Academy, a nonprofit educational website with thousands of free content. There are currently millions of individuals using Khan Academy, but because of the large variety of content and subjects available, students can easily lose track of how to progress through the product. The goal of this project is to try to learn optimal paths from prevous highly motivated students. To prediction uses Gate Recurrent Unit (GRU) model, a type of RNN, to predict optimal future session activities.  
 
 
 ### What is the Model Objective
@@ -26,7 +26,9 @@ Output: The model outputs an embedding for each subsequent session after the fir
 
 
 ### What are the files in this repo
-> `model_params.yaml`: Stores the model parameters used to run `train.py` 
+
+> `model_params.yaml`: Stores the model parameters used to run `train.py`   
+
 > `my_env.yml`: Stores the conda environment specifications
 
 `model`: Run the GRU model on tokenize data 
@@ -42,7 +44,8 @@ Output: The model outputs an embedding for each subsequent session after the fir
 
 
 #### Resources
-The model is inspired by a couple of different pieces of work and the resources are available here: 
+The model is inspired by a couple of different pieces of work and the resources are available here:
+
 [RNN for game generation](https://medium.com/@ageitgey/machine-learning-is-fun-part-2-a26a10b68df3)  
 [Deep Knowledge Tracing](https://web.stanford.edu/~cpiech/bio/papers/deepKnowledgeTracing.pdf)  
 [GRU Model] (https://arxiv.org/pdf/1406.1078.pdf)
