@@ -13,7 +13,7 @@ import pdb
 
 
 def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
-                  output_sample_filename, epoch, max_epoch, exercise_to_index_map, 
+                  output_sample_filename, epoch, exercise_to_index_map, 
                   perc_sample_print, include_correct):
     # set in training node
     # perc_sample_print = 0.05 # set the percent sample
@@ -31,7 +31,7 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         # need to convert batch_x from tensor flow object to numpy array
         # before converting to matrix
         input_padded, label_padded, seq_lens = convert_token_to_matrix(
-            batch_x[0].numpy(), val_data, val_keys, content_dim)
+            batch_x[0].numpy(), val_data, val_keys, content_dim, include_correct)
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
@@ -119,7 +119,7 @@ def writer_sample_output(output_sample_filename, epoch, step, padded_input,
         actual = padded_label[i]
         prediction = threshold_output[i]
         correct = correct_ones[i]
-        write_student_sample(step_writer, student, input,
+        write_student_sample(step_writer, student, stud_input,
                              actual, prediction, correct,
                              index_to_exercise_map, include_correct)
     step_writer.close()
@@ -176,8 +176,8 @@ def create_readable_list_with_correct(vect, index_to_content_map, content_num):
     indices = np.where(vect[:content_num-1] > 0.01)[0]
     for index in indices:
         content = index_to_content_map[index+1]
-        perc_correct = vect[content_num + index]
-        content.append((content, perc_correct))
+        perc_correct = vect[content_num + index].numpy()
+        content_list.append((content, str(perc_correct)))
     return content_list
 
 
