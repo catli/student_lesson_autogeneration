@@ -13,8 +13,7 @@ import pdb
 
 
 def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
-                  output_sample_filename, epoch, exercise_to_index_map,
-                  perc_sample_print, include_correct):
+                  output_sample_filename, epoch, max_epoch, exercise_to_index_map, perc_sample_print):
     # set in training node
     # perc_sample_print = 0.05 # set the percent sample
 
@@ -31,7 +30,7 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         # need to convert batch_x from tensor flow object to numpy array
         # before converting to matrix
         input_padded, label_padded, seq_lens = convert_token_to_matrix(
-            batch_x[0].numpy(), val_data, val_keys, content_dim, include_correct)
+            batch_x[0].numpy(), val_data, val_keys, content_dim)
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
@@ -52,7 +51,7 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         threshold_output, num_no_pred = mask_padded_errors(
             threshold_output, seq_lens)
         if (random.random() <= perc_sample_print):
-            writer_sample_outut(output_sample_filename, epoch, step,
+            writer_sample_output(output_sample_filename, epoch, step, padded_input,
                                 threshold_output, padded_label, correct_ones,
                                 exercise_to_index_map)
         total_predicted += len(torch.nonzero(threshold_output))
@@ -102,7 +101,7 @@ def find_correct_predictions(output, label, threshold):
     return threshold_output, correct_ones
 
 
-def writer_sample_outut(output_sample_filename, epoch, step,
+def writer_sample_output(output_sample_filename, epoch, step, padded_input,
                         threshold_output, padded_label, correct_ones, exercise_to_index_map):
     '''
         Randomly sample batches, and students with each batch
@@ -114,32 +113,33 @@ def writer_sample_outut(output_sample_filename, epoch, step,
     # iterate over students
     for i, _ in enumerate(padded_label):
         student = 'step'+str(step) + 'batchstud' + str(i)
+        stud_input = padded_input[i]
         actual = padded_label[i]
         prediction = threshold_output[i]
         correct = correct_ones[i]
-        write_student_sample(step_writer, student,
+        write_student_sample(step_writer, student, input,
                              actual, prediction, correct, index_to_exercise_map)
     step_writer.close()
 
 
-def write_student_sample(sample_writer, student,
+def write_student_sample(sample_writer, student, stud_input,
                          actual, prediction, correct, index_to_content_map):
     '''
         print readable prediciton sample
         for input, output, label expect a matrix that's already
         converted to ones where value above threshold set to 1
     '''
-    # [CORRECT TODO]: for the create readable list (actual), change index
-    #        if count added in and if % correct added (ignore percent)
+    content_num = len(index_to_content_map)
     for i, label in enumerate(actual):
         # pass over the first one, no prediction made
         if i == 0:
             continue
-        readable_input = create_readable_list(
-            actual[i-1], index_to_content_map)
+        readable_input = create_readable_list_with_correct(
+            stud_input[i], index_to_content_map, content_num)
         readable_output = create_readable_list(
             prediction[i], index_to_content_map)
-        readable_label = create_readable_list(label, index_to_content_map)
+        readable_label = create_readable_list(
+            label, index_to_content_map)
         readable_correct = create_readable_list(
             correct[i], index_to_content_map)
         sample_writer.write(student + '\t' +
@@ -153,11 +153,24 @@ def create_readable_list(vect, index_to_content_map):
     '''
        create the readable list of cotent
     '''
-    content = []
+    content_list = []
     indices = np.where(vect > 0.01)[0]
     for index in indices:
-        content.append(index_to_content_map[index+1])
-    return content
+        content_list.append(index_to_content_map[index+1])
+    return content_list
+
+
+def create_readable_list_with_correct(vect, index_to_content_map, content_num):
+    '''
+       create the readable list of cotent
+    '''
+    content_list = []
+    indices = np.where(vect[:content_num-1] > 0.01)[0]
+    for index in indices:
+        content = index_to_content_map[index+1]
+        perc_correct = vect[content_num + index]
+        content.append((content, perc_correct))
+    return content_list
 
 
 def create_index_to_content_map(content_index):
