@@ -13,7 +13,8 @@ import pdb
 
 
 def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
-                  output_sample_filename, epoch, max_epoch, exercise_to_index_map, perc_sample_print):
+                  output_sample_filename, epoch, max_epoch, exercise_to_index_map, 
+                  perc_sample_print, include_correct):
     # set in training node
     # perc_sample_print = 0.05 # set the percent sample
 
@@ -53,7 +54,7 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         if (random.random() <= perc_sample_print):
             writer_sample_output(output_sample_filename, epoch, step, padded_input,
                                 threshold_output, padded_label, correct_ones,
-                                exercise_to_index_map)
+                                exercise_to_index_map, include_correct)
         total_predicted += len(torch.nonzero(threshold_output))
         total_label += len(torch.nonzero(padded_label))
         total_correct += len(torch.nonzero(correct_ones))
@@ -102,7 +103,8 @@ def find_correct_predictions(output, label, threshold):
 
 
 def writer_sample_output(output_sample_filename, epoch, step, padded_input,
-                        threshold_output, padded_label, correct_ones, exercise_to_index_map):
+                        threshold_output, padded_label, correct_ones,
+                        exercise_to_index_map, include_correct):
     '''
         Randomly sample batches, and students with each batch
         to write data
@@ -118,12 +120,14 @@ def writer_sample_output(output_sample_filename, epoch, step, padded_input,
         prediction = threshold_output[i]
         correct = correct_ones[i]
         write_student_sample(step_writer, student, input,
-                             actual, prediction, correct, index_to_exercise_map)
+                             actual, prediction, correct,
+                             index_to_exercise_map, include_correct)
     step_writer.close()
 
 
 def write_student_sample(sample_writer, student, stud_input,
-                         actual, prediction, correct, index_to_content_map):
+                         actual, prediction, correct, index_to_content_map,
+                         include_correct):
     '''
         print readable prediciton sample
         for input, output, label expect a matrix that's already
@@ -134,8 +138,12 @@ def write_student_sample(sample_writer, student, stud_input,
         # pass over the first one, no prediction made
         if i == 0:
             continue
-        readable_input = create_readable_list_with_correct(
-            stud_input[i], index_to_content_map, content_num)
+        if include_correct:
+            readable_input = create_readable_list_with_correct(
+                stud_input[i], index_to_content_map, content_num)
+        else:
+            readable_input = create_readable_list(
+                stud_input[i], index_to_content_map)
         readable_output = create_readable_list(
             prediction[i], index_to_content_map)
         readable_label = create_readable_list(
