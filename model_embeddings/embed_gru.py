@@ -90,9 +90,12 @@ class GRU_MODEL(nn.Module):
         '''
         embeddings = self.embedding(batch_data)
         # [EMBED TODO] preview the batch data to check operation
-        batch_embeddings = torch.sum(embeddings, dim = 2)
+        batch_embeddings =torch.sum(embeddings, dim = 2)
+        # set the normalization denominator
+        norm =  torch.Tensor(torch.sum(embeddings!=0,dim=2).float())
+        norm[norm==0] = 1
         # [EMBED TODO] is it necessary to normalize the input?
-        return batch_embeddings
+        return torch.div(batch_embeddings, norm)
 
 
 
