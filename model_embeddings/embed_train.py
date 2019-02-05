@@ -140,7 +140,8 @@ if __name__ == '__main__':
         loaded_params['output_sample_filename'])
     content_index_filename = loaded_params['content_index_filename']
     # creat ethe filename
-    file_affix = 'unit' + str(nb_lstm_units) + \
+    file_affix = 'Embed_' + \
+        'unit' + str(nb_lstm_units) + \
         'layer' + str(nb_lstm_layers) + \
         'bsize' + str(batchsize).replace('.', '') + \
         'thresh' + str(threshold).replace('.', '') + \
