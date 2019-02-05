@@ -1,17 +1,16 @@
 '''
-    Train the model
-    for batched data, batch and train
-    the approach to training takes a lot of inspiration from how this
-    CAHL goal-based model was built https://github.com/CAHLR/goal-based-recommendation
-    by WeiJiang (@fabulosa)
+    Train the model on GRU, convert the input into a set of embeddings
+    before training
+
 '''
 
-from gru import GRU_MODEL as gru_model
 import torch
 import torch.nn as nn
-from process_data import split_train_and_test_data, convert_token_to_matrix, extract_content_map
 from torch.autograd import Variable
-from evaluate import evaluate_loss  # , evaluate_precision_and_recall
+
+from embed_gru import GRU_MODEL as gru_model
+from embed_process_data import split_train_and_test_data, convert_token_to_matrix, extract_content_map
+from embed_evaluate import evaluate_loss  # , evaluate_precision_and_recall
 import torch.utils.data as Data
 import matplotlib.pyplot as plt
 import numpy as np
@@ -152,10 +151,7 @@ if __name__ == '__main__':
     exercise_to_index_map, content_dim = extract_content_map(
         content_index_filename)
     # if include perc correct in the input, then double dimensions
-    if include_correct:
-        input_dim = content_dim*2
-    else:
-        input_dim = content_dim
+    input_dim = 10
 
     model = gru_model(input_dim=input_dim,
                       output_dim=content_dim,

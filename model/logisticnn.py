@@ -43,7 +43,7 @@ def run_model(model, train_data, content_index,
     # Loss and Optimizer
     # Softmax is internally computed.
     # Set parameters to be updated.
-    criterion = nn.MSELoss()
+    loss_func = nn.MSELoss()
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learning_rate)
     # Training the Model
@@ -69,14 +69,8 @@ def run_model(model, train_data, content_index,
                 train_data, batch, content_index, input_lag)
             # normalize dataset for logistic model
             # setting output greater than 1 to 1 ehre
-            # [@zig: I'm setting the label to one here since I figure
-            #    logistic regression and sigmoid function would not work well
-            #    otherwise, is this the right way to do it?]
             input_mat, label_mat = normalize_or_threshold(
                 input_mat_lag, label_mat)
-            # [ @zig: model kept returning format error until I convert to float
-            # other there easier ways to do this?]
-            # https://community.insightdata.com/community/pl/afnqsyit5in1bf35w9ce4frcye
             input_mat = tensor(input_mat).float()
             label_mat = tensor(label_mat).float()
 
@@ -94,7 +88,7 @@ def run_model(model, train_data, content_index,
                 print(torch.max(outputs))
                 print('min output')
                 print(torch.min(outputs))
-            loss = criterion(outputs, label_mat)
+            loss = loss_func(outputs, label_mat)
             # add the epoc_
             total_epoch_loss += loss.data.detach()
             loss.backward()
