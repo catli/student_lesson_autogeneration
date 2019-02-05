@@ -12,30 +12,69 @@ def convert_token_to_matrix(batch_index, json_data, json_keys, content_num,
         from student session activity json_data
         convert this data in batch form
     '''
-    # number of students in the batch
+    # number of sessions
     num_sess = []
+    # number of content in each session
+    num_content = []
     # max number of sessions in batch
     for student_index in batch_index:
         # return the key pairs (student_id, seq_len)
         # and the first item of pair as student id
         student_key = json_keys[student_index][0]
         num_sess.append(len(json_data[student_key].keys())-1)
+        for sess in json_data[student_key]:
+            num_content.append(len(json_data[student_key][sess]))
     max_seq = np.max(num_sess) + 1
     seq_lens = num_sess
+    max_content = np.max(num_content)
     if include_correct:
+        # [EMBED TODO] update the input if needed
         input_padded, label_padded = create_padded_matrix_with_correct(
-            batch_index, json_data, json_keys, content_num, max_seq)
+            batch_index, json_data, json_keys, content_num, max_content)
     else:
-        input_padded, label_padded = create_padded_matrix(batch_index,
-            json_data, json_keys, content_num, max_seq)
+        input_padded = create_padded_sequence(batch_index, json_data, json_keys,
+            max_seq, max_content)
+        label_padded = create_padded_matrix(batch_index, json_data, json_keys,
+            content_num, max_seq)
     # assign the number of sessions as sequence length for each student
     # this will feed be used later to tell the model
     # which sessions are padded
     return input_padded, label_padded, seq_lens
 
 
-def create_padded_matrix(batch_index, json_data, json_keys, content_num,
-                         max_seq, count_input = False):
+def create_padded_sequence(batch_index, json_data, json_keys, max_seq, max_content):
+    '''
+        create an empty matrix for the padded input /output
+        with size (num_session-1, content_num)
+        both input/output vectors populated with binomials with 1 if interacted
+        with content and 0 otherwise
+    '''
+    batchsize = len(batch_index)
+    input_padded = np.zeros((batchsize, max_seq, max_content), int)
+    # populate student_padded
+    for stud_num, student_index in enumerate(batch_index):
+        # return the key pairs (student_id, seq_len)
+        # and the first item of pair as student id
+        student_array = []
+        student_key = json_keys[student_index][0]
+        sessions = sorted(json_data[student_key].keys())
+        for sess_num, session in enumerate(sessions):
+            content_items = json_data[student_key][session]
+            for item_num, item in enumerate(content_items):
+                exercise_id = item[0]
+                is_correct = item[1]
+                input_padded[stud_num, sess_num, item_num] = exercise_id
+                # [EMBED TODO]: add input padded with is_correct
+                # if is_correct:
+                # add 10000 or content_num to exercise id
+                # differentiate is_correct embeddng from other embedding
+                # input_padded[stud_num, sess_num, item_num*2] = exercise_id
+    # take first n-1 sessions for input and last n-1 sessions for output
+    input_padded = input_padded[:, :-1]
+    return input_padded
+
+
+def create_padded_matrix(batch_index, json_data, json_keys, content_num, max_seq):
     '''
         create an empty matrix for the padded input /output
         with size (num_session-1, content_num)
@@ -44,7 +83,6 @@ def create_padded_matrix(batch_index, json_data, json_keys, content_num,
     '''
     batchsize = len(batch_index)
     # placeholder for padded input and label
-    input_padded = np.zeros((batchsize, int(max_seq), content_num), int)
     label_padded = np.zeros((batchsize, int(max_seq), content_num), int)
     # populate student_padded
     for stud_num, student_index in enumerate(batch_index):
@@ -58,16 +96,9 @@ def create_padded_matrix(batch_index, json_data, json_keys, content_num,
                 exercise_id = item[0]
                 is_correct = item[1]
                 label_padded[stud_num, sess_num, exercise_id-1] = 1
-                # decide whether to set input to count
-                if count_input:
-                    input_padded[stud_num, sess_num, exercise_id-1]+= 1
-                else:
-                    input_padded[stud_num, sess_num, exercise_id-1] = 1
     # take first n-1 sessions for input and last n-1 sessions for output
-    input_padded = input_padded[:, :-1]
     label_padded = label_padded[:, 1:]
-    return input_padded, label_padded
-
+    return label_padded
 
 
 def create_padded_matrix_with_correct(batch_index, json_data, json_keys,

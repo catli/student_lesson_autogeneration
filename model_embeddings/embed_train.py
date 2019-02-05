@@ -91,7 +91,7 @@ def train(model, optimizer, train_data, loader,
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
-        padded_input = Variable(torch.Tensor(
+        padded_input = Variable(torch.LongTensor(
             input_padded), requires_grad=False)  # .cuda()
         padded_label = Variable(torch.Tensor(
             label_padded), requires_grad=False)  # .cuda()
@@ -151,6 +151,7 @@ if __name__ == '__main__':
     exercise_to_index_map, content_dim = extract_content_map(
         content_index_filename)
     # if include perc correct in the input, then double dimensions
+    # [EMBED TODO] add to model_params
     input_dim = 10
 
     model = gru_model(input_dim=input_dim,
@@ -164,4 +165,4 @@ if __name__ == '__main__':
                        optimizer, content_dim, threshold,
                        output_sample_filename, exercise_to_index_map, max_epoch, file_affix,
                        perc_sample_print, include_correct)
-    torch.save(model.state_dict(), 'GRUmodel_' + file_affix)
+    torch.save(model.state_dict(), 'EmbedGRUmodel_' + file_affix)

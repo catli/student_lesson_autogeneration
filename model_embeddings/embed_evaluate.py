@@ -5,7 +5,7 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 import torch.utils.data as Data
 import numpy as np
-from process_data import split_train_and_test_data, convert_token_to_matrix
+from embed_process_data import split_train_and_test_data, convert_token_to_matrix
 import random
 import pdb
 
@@ -35,7 +35,7 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         # Variable, used to set tensor, but no longer necessary
         # Autograd automatically supports tensor with requires_grade=True
         #  https://pytorch.org/docs/stable/autograd.html?highlight=autograd%20variable
-        padded_input = Variable(torch.Tensor(
+        padded_input = Variable(torch.LongTensor(
             input_padded), requires_grad=False)  # .cuda()
         padded_label = Variable(torch.Tensor(
             label_padded), requires_grad=False)  # .cuda()

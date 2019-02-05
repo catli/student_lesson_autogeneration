@@ -26,7 +26,7 @@ class GRU_MODEL(nn.Module):
     def __init__(self, input_dim, output_dim, nb_lstm_layers, nb_lstm_units, batch_size):
         super(GRU_MODEL, self).__init__()
         self.input_dim = input_dim
-        self.output_dim = output_dim
+        self.output_dim = output_dim # num of possible content
         self.nb_lstm_layers = nb_lstm_layers
         self.nb_lstm_units = nb_lstm_units
         self.batch_size = batch_size
@@ -38,10 +38,11 @@ class GRU_MODEL(nn.Module):
                                           self.output_dim)
         # [EMBED TODO]: Add the inputs for embeddings
         self.embedding = nn.Embedding(
-            # [EMBED TODO] change to output dim
-            num_embeddings = content_dim,# vaocab word
-            embedding_dim = self.input_dim, #mbedding dimension
-            padding_idx = padding_idx
+            # [EMBED TODO] if is_correct included, then
+            #    double or increase output dim to value
+            num_embeddings = 2000, # output_dim = num of possible content
+            embedding_dim = self.input_dim, # number of hidden dimensions
+            padding_idx = 0
             )
 
     def init_hidden(self):
@@ -64,10 +65,9 @@ class GRU_MODEL(nn.Module):
         '''
         # pack_padded_sequence so that
         # padded items in the sequence won't be shown
-        
-
+        batch_embeddings = self.create_embeddings(batch_data)
         packed_input = utils.rnn.pack_padded_sequence(
-            batch_data, seq_lens, batch_first=True)
+            batch_embeddings, seq_lens, batch_first=True)
         # [EMBED TODO]
         # run through the GRU model
         gru_out, _ = self.model(packed_input, self.hidden)
@@ -83,19 +83,16 @@ class GRU_MODEL(nn.Module):
         output = sigmoid_out.view(self.batch_size, -1, self.output_dim)
         return output
 
-    def create_embedddings(self, batch_data, sess_len):
+    def create_embeddings(self, batch_data):
         '''
             batch data will be in the format of long tensors
             with the format [1,2,4,3],
         '''
-        batch_embeddings = self.embedding(batch_data)
+        embeddings = self.embedding(batch_data)
         # [EMBED TODO] preview the batch data to check operation
-        for i, batch in batch_data:
-            num_content = sess_len[i]
-            batch_data[num_content:,:] = 0
-        output = torch.sum(batch_embeddings, dim = 2)
-        # [EMBED TODO] is it necessary to divide the 
-        return output
+        batch_embeddings = torch.sum(embeddings, dim = 2)
+        # [EMBED TODO] is it necessary to normalize the input?
+        return batch_embeddings
 
 
 
