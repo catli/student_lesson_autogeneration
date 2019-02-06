@@ -108,6 +108,7 @@ def writer_sample_output(output_sample_filename, epoch, step, padded_input,
     '''
         Randomly sample batches, and students with each batch
         to write data
+        [REFORMAT TODO] turn into class and split write student iter
     '''
     index_to_exercise_map = create_index_to_content_map(exercise_to_index_map)
     step_filename = output_sample_filename+'_'+'ep'+str(epoch)+'st'+str(step)
