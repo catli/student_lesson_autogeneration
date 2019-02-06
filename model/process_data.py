@@ -65,7 +65,8 @@ def create_padded_matrix(batch_index, json_data, json_keys, content_num,
                     input_padded[stud_num, sess_num, exercise_id-1] = 1
     # take first n-1 sessions for input and last n-1 sessions for output
     input_padded = input_padded[:, :-1]
-    label_padded = label_padded[:, 1:]
+    # [NEXT TODO] add num_next
+    label_padded = max_next_sessions(label_padded[:, 1:], 5)
     return input_padded, label_padded
 
 
@@ -100,7 +101,8 @@ def create_padded_matrix_with_correct(batch_index, json_data, json_keys,
     concat_input_padded = concat_perc_correct(correct_padded, input_padded)
     # take first n-1 sessions for input and last n-1 sessions for output
     concat_input_padded = concat_input_padded[:, :-1]
-    label_padded = label_padded[:, 1:]
+    # [NEXT TODO] add num_next
+    label_padded = max_next_sessions(label_padded[:, 1:], 5)
     return concat_input_padded, label_padded
 
 
@@ -120,6 +122,20 @@ def concat_perc_correct(correct_padded, input_padded):
         axis=2)
     return concat_input_padded
 
+
+
+def max_next_sessions(label_padded, num_next):
+    '''
+        For the next x sessions, create a new
+        output that includes any activity in the num_next
+        sessions from the input.
+    '''
+    next_label_padded = label_padded.copy()
+    for b, _ in enumerate(label_padded):
+        for i, _ in enumerate(label_padded[b]):
+            next_label_padded[b, i, :] = np.max(
+                label_padded[b, i:(i+num_next), :], axis=0)
+    return next_label_padded
 
 
 def extract_content_map(content_index_filename):
