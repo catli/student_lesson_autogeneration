@@ -120,6 +120,7 @@ def plot_loss(loss_trend, file_affix):
                                         file_affix + '.jpg')
     plt.plot(range(len(loss_trend)), loss_trend, 'r--')
     plt.savefig(write_filename)
+    plt.clf() 
 
 
 if __name__ == '__main__':
@@ -140,6 +141,8 @@ if __name__ == '__main__':
     output_sample_filename = os.path.expanduser(
         loaded_params['output_sample_filename'])
     content_index_filename = loaded_params['content_index_filename']
+    input_dim = loaded_params['embed_dim'] 
+    embed_lr = loaded_params['embed_lr'] 
     # creat ethe filename
     file_affix = 'Embed_' + \
         'unit' + str(nb_lstm_units) + \
@@ -154,7 +157,7 @@ if __name__ == '__main__':
         content_index_filename)
     # if include perc correct in the input, then double dimensions
     # [EMBED TODO] add to model_params
-    input_dim = 10
+    # input_dim = 10
 
     model = gru_model(input_dim=input_dim,
                       output_dim=content_dim,
@@ -162,9 +165,10 @@ if __name__ == '__main__':
                       nb_lstm_units=nb_lstm_units,
                       batch_size=batchsize)
     # [TODO] consider whether to include weight decay
-    optimizer = torch.optim.Adam([
-        {'params':  model.model.parameters()},
-        {'params':  model.embedding.parameters(), 'lr': 0.4}],
+    optimizer = torch.optim.Adam( [
+        {'params':  model.model.parameters(), 'lr': learning_rate},
+        {'params':  model.hidden_to_output.parameters(), 'lr': learning_rate},
+        {'params':  model.embedding.parameters(), 'lr': embed_lr}],
         lr=learning_rate)
     train_and_evaluate(model, full_data, train_keys, val_keys,
                        optimizer, content_dim, threshold,

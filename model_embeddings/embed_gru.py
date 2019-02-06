@@ -91,8 +91,6 @@ class GRU_MODEL(nn.Module):
             with the format [1,2,4,3],
         '''
         embeddings = self.embedding(batch_data)
-        # [EMBED TODO] Delete after testing
-        print(self.embedding(torch.LongTensor([1])))
         # [EMBED TODO] preview the batch data to check operation
         batch_embeddings =torch.sum(embeddings, dim = 2)
         # set the normalization denominator
@@ -116,6 +114,7 @@ class GRU_MODEL(nn.Module):
         for i in range(content_dim):
             plot = plt.text(pca_embedding[i,0], pca_embedding[i,1], i, fontsize=5)
         plot.figure.savefig(os.path.expanduser('~/sorted_data/output/embed_' + str(epoch) +'.jpg'))
+        plt.clf()	
 
 
     def loss(self, output, label):
