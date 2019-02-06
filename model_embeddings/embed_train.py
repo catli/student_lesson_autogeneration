@@ -48,6 +48,7 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
                                  drop_last=True)
     while True:
         epoch += 1
+        model.print_embeddings(content_dim, epoch)
         print('EPOCH %s:' % str(epoch))
         train_loss = train(model, optimizer, full_data, train_loader,
                            train_keys, epoch, content_dim, include_correct)
@@ -161,7 +162,10 @@ if __name__ == '__main__':
                       nb_lstm_units=nb_lstm_units,
                       batch_size=batchsize)
     # [TODO] consider whether to include weight decay
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam([
+        {'params':  model.model.parameters()},
+        {'params':  model.embedding.parameters(), 'lr': 0.4}],
+        lr=learning_rate)
     train_and_evaluate(model, full_data, train_keys, val_keys,
                        optimizer, content_dim, threshold,
                        output_sample_filename, exercise_to_index_map, max_epoch, file_affix,

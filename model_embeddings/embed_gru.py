@@ -20,6 +20,8 @@ import torch.nn.utils as utils
 import random
 import pdb
 import time
+# [EMBED TODO]
+from sklearn.decomposition import PCA
 
 
 class GRU_MODEL(nn.Module):
@@ -40,7 +42,7 @@ class GRU_MODEL(nn.Module):
         self.embedding = nn.Embedding(
             # [EMBED TODO] if is_correct included, then
             #    double or increase output dim to value
-            num_embeddings = 2000, # output_dim = num of possible content
+            num_embeddings = output_dim+1, # output_dim = num of possible content
             embedding_dim = self.input_dim, # number of hidden dimensions
             padding_idx = 0
             )
@@ -89,6 +91,8 @@ class GRU_MODEL(nn.Module):
             with the format [1,2,4,3],
         '''
         embeddings = self.embedding(batch_data)
+        # [EMBED TODO] Delete after testing
+        print(self.embedding(torch.LongTensor([1])))
         # [EMBED TODO] preview the batch data to check operation
         batch_embeddings =torch.sum(embeddings, dim = 2)
         # set the normalization denominator
@@ -97,6 +101,21 @@ class GRU_MODEL(nn.Module):
         # [EMBED TODO] is it necessary to normalize the input?
         return torch.div(batch_embeddings, norm)
 
+    def print_embeddings(self, content_dim, epoch):
+        '''
+            plot embeddings for each content array
+        '''
+        embedding_output = []
+        for i in range(content_dim):
+            content_embedding = self.embedding(
+                torch.LongTensor([[i]])).detach().numpy()[0][0]
+            embedding_output.append(content_embedding)
+        pca = PCA(n_components=2)
+        pca_embedding = pca.fit_transform(embedding_output)
+        plot = plt.scatter(pca_embedding[:,0], pca_embedding[:,1], color = 'white')
+        for i in range(content_dim):
+            plot = plt.text(pca_embedding[i,0], pca_embedding[i,1], i, fontsize=5)
+        plot.figure.savefig(os.path.expanduser('~/sorted_data/output/embed_' + str(epoch) +'.jpg'))
 
 
     def loss(self, output, label):
