@@ -83,6 +83,10 @@ class GRU_MODEL(nn.Module):
         # Add a sigmoid layer
         sigmoid_out = torch.sigmoid(unpacked_out)
         output = sigmoid_out.view(self.batch_size, -1, self.output_dim)
+        print('min')
+        print(torch.min(output))
+        print('max')
+        print(torch.max(output))
         return output
 
     def create_embeddings(self, batch_data):

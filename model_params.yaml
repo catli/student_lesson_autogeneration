@@ -1,4 +1,4 @@
-max_epoch: 10
+max_epoch: 5
 nb_lstm_units: 50
 nb_lstm_layers: 1
 batchsize: 20

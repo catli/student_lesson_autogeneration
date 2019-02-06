@@ -120,7 +120,7 @@ def plot_loss(loss_trend, file_affix):
                                         file_affix + '.jpg')
     plt.plot(range(len(loss_trend)), loss_trend, 'r--')
     plt.savefig(write_filename)
-    plt.clf() 
+    plt.clf()
 
 
 if __name__ == '__main__':
@@ -168,8 +168,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam( [
         {'params':  model.model.parameters(), 'lr': learning_rate},
         {'params':  model.hidden_to_output.parameters(), 'lr': learning_rate},
-        {'params':  model.embedding.parameters(), 'lr': embed_lr}],
-        lr=learning_rate)
+        {'params':  model.embedding.parameters(), 'lr': embed_lr}])
     train_and_evaluate(model, full_data, train_keys, val_keys,
                        optimizer, content_dim, threshold,
                        output_sample_filename, exercise_to_index_map, max_epoch, file_affix,
