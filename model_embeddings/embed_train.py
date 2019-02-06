@@ -120,6 +120,7 @@ def plot_loss(loss_trend, file_affix):
                                         file_affix + '.jpg')
     plt.plot(range(len(loss_trend)), loss_trend, 'r--')
     plt.savefig(write_filename)
+    plt.clf()
 
 
 if __name__ == '__main__':
@@ -164,7 +165,7 @@ if __name__ == '__main__':
     # [TODO] consider whether to include weight decay
     optimizer = torch.optim.Adam([
         {'params':  model.model.parameters()},
-        {'params':  model.embedding.parameters(), 'lr': 0.4}],
+        {'params':  model.embedding.parameters(), 'lr': 0.3}],
         lr=learning_rate)
     train_and_evaluate(model, full_data, train_keys, val_keys,
                        optimizer, content_dim, threshold,
