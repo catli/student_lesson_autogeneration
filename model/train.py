@@ -168,3 +168,4 @@ if __name__ == '__main__':
                        optimizer, content_dim, threshold,
                        output_sample_filename, exercise_to_index_map, max_epoch, file_affix,
                        perc_sample_print, include_correct)
+    torch.save(model.state_dict(), 'model_' + file_affix)

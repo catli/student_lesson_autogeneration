@@ -1,0 +1,7 @@
+model_filename: 'placeholder'
+include_correct: True
+threshold: 0.2
+batchsize: 1
+exercise_filename: '~/sorted_data/khan_problem_token_3only_tiny'
+output_filename: '~/sorted_data/sample_sessions/sample_prediction_generated'
+content_index_filename: 'data/exercise_index_3only'
