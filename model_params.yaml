@@ -8,8 +8,8 @@ test_perc: 0.2
 threshold: 0.2
 embed_dim: 10
 perc_sample_print: 0.000
-data_name: '3learner10embed'
+data_name: 'allgru'
 include_correct: False
-exercise_filename: '~/sorted_data/khan_problem_token_3learner'
+exercise_filename: '~/sorted_data/khan_problem_token_all'
 output_sample_filename: '~/sorted_data/sample_sessions/sample_prediction_generated'
-content_index_filename: 'data/exercise_index_3learner'
+content_index_filename: 'data/exercise_index_all'
