@@ -1,35 +1,53 @@
-from model.process_data import  convert_token_to_matrix, split_train_and_test_data
-from model.evaluate import  find_correct_predictions
+import torch
+import torch.utils.data as Data
+import yaml
+import os
+import numpy as np
+from process_data import convert_token_to_matrix, split_train_and_test_data, extract_content_map
+from evaluate import  find_correct_predictions
+from torch.autograd import Variable
+from gru import GRU_MODEL as gru_model
+import pdb
 
 '''
     Read in test data and predict sessions from existing models
 '''
 def predict_sessions(model, full_data, keys, content_dim, threshold, output_filename,
               exercise_to_index_map, include_correct):
-    model.eval()
     data_index = torch.IntTensor(range(len(keys)))
     torch_data_index = Data.TensorDataset(data_index)
     loader = Data.DataLoader(dataset=torch_data_index,
                              batch_size=1,
                              num_workers=2)
     output_writer = open(output_filename, 'w')
+    output_writer.write('student' + '\t' +
+                    'last_session' + '\t' +
+                    'predicted' + '\t' +
+                    'actual' + '\t' +
+                    'correct' + '\n')
+
     for step, batch in enumerate(loader):
+        # assume we are not batching the data
+        # only one student value relevant
+        # returns (student_id, num_sess), only first value used
+        student = keys[batch[0]][0]
+        # grab all the sessions for a student
+        sessions = sorted(full_data[student].keys())
         # convert token data to matrix
-        student = keys[batch_index]
-        sessions = full_data[student].keys
         input_padded, label_padded, seq_lens = convert_token_to_matrix(
             batch[0].numpy(), full_data, keys, content_dim, include_correct)
         padded_input = Variable(torch.Tensor(
             input_padded), requires_grad=False)  # .cuda()
         padded_label = Variable(torch.Tensor(
             label_padded), requires_grad=False)  # .cuda()
-        model.hidden = model.init_hidden()
+        model.init_hidden()
         y_pred = model(padded_input, seq_lens)  # .cuda()
         threshold_output, correct_ones = find_correct_predictions(
             y_pred, padded_label, threshold)
         writer_sample_output(output_writer, student, sessions, padded_input,
                                 threshold_output, padded_label, correct_ones,
                                 exercise_to_index_map, include_correct)
+    output_writer.close()
 
 
 def writer_sample_output(output_writer, student, sessions, padded_input,
@@ -41,21 +59,17 @@ def writer_sample_output(output_writer, student, sessions, padded_input,
         [REFORMAT TODO] turn into class and split write student iter
     '''
     index_to_exercise_map = create_index_to_content_map(exercise_to_index_map)
-    step_filename = output_sample_filename
     # iterate over students
-    for i, _ in enumerate(padded_label):
-        student_session = student + '_' + sessions[i]
-        stud_input = padded_input[i]
-        actual = padded_label[i]
-        prediction = threshold_output[i]
-        correct = correct_ones[i]
-        write_student_sample(output_writer, student_session, stud_input,
-                             actual, prediction, correct,
-                             index_to_exercise_map, include_correct)
-    step_writer.close()
+    stud_input = padded_input[0]
+    actual = padded_label[0]
+    prediction = threshold_output[0]
+    correct = correct_ones[0]
+    write_student_sample(output_writer, student, sessions, stud_input,
+                         actual, prediction, correct,
+                         index_to_exercise_map, include_correct)
 
 
-def write_student_sample(sample_writer, student, stud_input,
+def write_student_sample(sample_writer, student, sessions, stud_input,
                          actual, prediction, correct, index_to_content_map,
                          include_correct):
     '''
@@ -65,6 +79,7 @@ def write_student_sample(sample_writer, student, stud_input,
     '''
     content_num = len(index_to_content_map)
     for i, label in enumerate(actual):
+        student_session = student + '_' + sessions[i]
         # pass over the first one, no prediction made
         if i == 0:
             continue
@@ -80,7 +95,7 @@ def write_student_sample(sample_writer, student, stud_input,
             label, index_to_content_map)
         readable_correct = create_readable_list(
             correct[i], index_to_content_map)
-        sample_writer.write(student + '\t' +
+        sample_writer.write(student_session + '\t' +
                             str(readable_input) + '\t' +
                             str(readable_output) + '\t' +
                             str(readable_label) + '\t' +
@@ -122,28 +137,55 @@ def create_index_to_content_map(content_index):
     return index_to_content_map
 
 
+# def init_hidden(model):
+#     '''
+#         initiate hidden layer as tensor
+#         approach for pytorch 1.0.0
+#         earlier versions use "Variable" to initiate tensor
+#         variable
+#         input, 
+#         # nb_lstm_layers, batch_size, nb_lstm_units
+#     '''
+#     hidden_layer = Variable(torch.zeros(1, 1, 50))
+#     return hidden_layer
+
 
 def run_inference():
-    loaded_params = yaml.load(open('model_params.yaml', 'r'))
+    print('start')
+    loaded_params = yaml.load(open('predict_params.yaml', 'r'))
     model_filename = loaded_params['model_filename']
+    nb_lstm_units = loaded_params['nb_lstm_units']
+    nb_lstm_layers = loaded_params['nb_lstm_layers']
     threshold = loaded_params['threshold']
     batchsize = loaded_params['batchsize']
     include_correct = loaded_params['include_correct']
     exercise_filename = os.path.expanduser(
         loaded_params['exercise_filename'])
     output_filename = os.path.expanduser(
-        loaded_params['output_sample_filename'])
+        loaded_params['output_filename'])
     content_index_filename = loaded_params['content_index_filename']
     # creat ethe filename
     file_affix = model_filename
-    model = torch.load( model_filename )
+    print(file_affix)
     exercise_to_index_map, content_dim = extract_content_map(
         content_index_filename)
-    keys, full_data = split_train_and_test_data(exercise_filename,
+    keys, _,  full_data, = split_train_and_test_data(exercise_filename,
         content_index_filename, test_perc=0)
+    # run the gru model
+    if include_correct:
+        input_dim = content_dim*2
+    else:
+        input_dim = content_dim
+
+    model = gru_model(input_dim=input_dim,
+                      output_dim=content_dim,
+                      nb_lstm_layers=nb_lstm_layers,
+                      nb_lstm_units=nb_lstm_units,
+                      batch_size=batchsize)
+    model.load_state_dict(torch.load( model_filename ))
     predict_sessions(model, full_data, keys, content_dim, threshold,
         output_filename, exercise_to_index_map, include_correct)
 
 
-if __name__ = "main":
+if __name__ == '__main__':
     run_inference()

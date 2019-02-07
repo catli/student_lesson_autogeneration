@@ -30,6 +30,7 @@ class GRU_MODEL(nn.Module):
         self.nb_lstm_layers = nb_lstm_layers
         self.nb_lstm_units = nb_lstm_units
         self.batch_size = batch_size
+        self.init_hidden()
         self.model = nn.GRU(input_size=self.input_dim,
                             hidden_size=nb_lstm_units,
                             num_layers=nb_lstm_layers,
@@ -44,7 +45,7 @@ class GRU_MODEL(nn.Module):
             earlier versions use "Variable" to initiate tensor
             variable
         '''
-        self.hidden_layer = Variable(torch.zeros(self.nb_lstm_layers,
+        self.hidden = Variable(torch.zeros(self.nb_lstm_layers,
                                                  self.batch_size, self.nb_lstm_units))
 
     def forward(self, batch_data, seq_lens):
@@ -59,7 +60,7 @@ class GRU_MODEL(nn.Module):
         packed_input = utils.rnn.pack_padded_sequence(
             batch_data, seq_lens, batch_first=True)
         # run through the GRU model
-        gru_out, _ = self.model(packed_input, self.hidden)
+        gru_out, self.hidden = self.model(packed_input, self.hidden)
         # undo packing operation
         unpacked_out, _ = utils.rnn.pad_packed_sequence(
             gru_out, batch_first=True)

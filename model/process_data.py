@@ -149,7 +149,7 @@ def extract_content_map(content_index_filename):
 
 
 def split_train_and_test_data(exercise_filename, content_index_filename,
-                              test_perc):
+                              test_perc = 0 ):
     '''
         split the data into training and test by learners
     '''
