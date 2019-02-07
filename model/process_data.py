@@ -66,7 +66,7 @@ def create_padded_matrix(batch_index, json_data, json_keys, content_num,
     # take first n-1 sessions for input and last n-1 sessions for output
     input_padded = input_padded[:, :-1]
     # [NEXT TODO] add num_next
-    label_padded = max_next_sessions(label_padded[:, 1:], 5)
+    label_padded = max_next_sessions(label_padded[:, 1:], 3)
     return input_padded, label_padded
 
 
@@ -102,7 +102,7 @@ def create_padded_matrix_with_correct(batch_index, json_data, json_keys,
     # take first n-1 sessions for input and last n-1 sessions for output
     concat_input_padded = concat_input_padded[:, :-1]
     # [NEXT TODO] add num_next
-    label_padded = max_next_sessions(label_padded[:, 1:], 5)
+    label_padded = max_next_sessions(label_padded[:, 1:], 3)
     return concat_input_padded, label_padded
 
 
