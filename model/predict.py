@@ -1,5 +1,6 @@
 import torch
 import torch.utils.data as Data
+from torch.nn import functional as F
 import yaml
 import os
 import numpy as np
@@ -42,12 +43,45 @@ def predict_sessions(model, full_data, keys, content_dim, threshold, output_file
             label_padded), requires_grad=False)  # .cuda()
         model.init_hidden()
         y_pred = model(padded_input, seq_lens)  # .cuda()
-        threshold_output, correct_ones = find_correct_predictions(
+        threshold_output, correct_ones = find_max_predictions(
             y_pred, padded_label, threshold)
         writer_sample_output(output_writer, student, sessions, padded_input,
                                 threshold_output, padded_label, correct_ones,
                                 exercise_to_index_map, include_correct)
     output_writer.close()
+
+
+
+
+def find_max_predictions(output, label, threshold):
+    '''
+        compare the predicted list and the actual rate
+        then generate the locaation of correct predictions
+    '''
+    # find the max prediction for each session
+    max_val = torch.max(output, dim=2)[0].detach().numpy()
+    # set the relative threshold output to zero
+    rel_thresh_output = torch.zeros(output.shape)
+    for stud, _ in enumerate(output):
+        for sess, _ in enumerate(output[stud]):
+            # set the relative threshold to one if within 0.01
+            # of max likelihood, threshold greater than 0.05
+            rel_thresh =  max_val[stud, sess] - 0.05
+            if rel_thresh<0.05:
+                rel_thresh = 0.05
+            rel_thresh_output[stud, sess] = torch.Tensor((
+                output[stud, sess].detach().numpy() >=rel_thresh
+                ).astype(float))
+    abs_threshold_output = F.threshold(output, threshold, 0)
+    threshold_output = torch.max(rel_thresh_output, abs_threshold_output)
+    # find the difference between label and prediction
+    # where prediction is incorrect (label is one and
+    # threshold output 0), then the difference would be 1
+    predict_diff = label - threshold_output
+    # set_correct_to_one = F.threshold(0.99, 0)
+    incorrect_ones = F.threshold(predict_diff, 0.999, 0)
+    correct_ones = label - incorrect_ones
+    return threshold_output, correct_ones
 
 
 def writer_sample_output(output_writer, student, sessions, padded_input,
