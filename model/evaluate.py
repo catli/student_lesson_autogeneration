@@ -118,7 +118,7 @@ def find_max_predictions(output, label, threshold):
         for sess, _ in enumerate(output[stud]):
             # set the relative threshold to one if within 0.01
             # of max likelihood, threshold greater than 0.05
-            rel_thresh =  max_val[stud, sess] - 0.05
+            rel_thresh =  max_val[stud, sess] - 0.09
             if rel_thresh<0.05:
                 rel_thresh = 0.05
             rel_thresh_output[stud, sess] = torch.Tensor((

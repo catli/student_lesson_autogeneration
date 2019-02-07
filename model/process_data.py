@@ -174,7 +174,7 @@ def split_train_and_test_ids(json_data, test_perc):
     '''
     student_ids = [student for student in json_data]
     train_ids, val_ids = train_test_split(student_ids,
-                                          test_size=0.2)
+                                          test_size=test_perc)
     ordered_train_keys = create_ordered_sequence_list(train_ids, json_data)
     ordered_val_keys = create_ordered_sequence_list(val_ids, json_data)
     return ordered_train_keys, ordered_val_keys
