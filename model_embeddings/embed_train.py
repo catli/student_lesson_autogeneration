@@ -158,12 +158,13 @@ if __name__ == '__main__':
     # if include perc correct in the input, then double dimensions
     # [EMBED TODO] add to model_params
     # input_dim = 10
-
+	
     model = gru_model(input_dim=input_dim,
                       output_dim=content_dim,
                       nb_lstm_layers=nb_lstm_layers,
                       nb_lstm_units=nb_lstm_units,
-                      batch_size=batchsize)
+                      batch_size=batchsize,
+		      include_correct = include_correct)
     # [TODO] consider whether to include weight decay
     optimizer = torch.optim.Adam( [
         {'params':  model.model.parameters(), 'lr': learning_rate},

@@ -25,7 +25,7 @@ from sklearn.decomposition import PCA
 
 
 class GRU_MODEL(nn.Module):
-    def __init__(self, input_dim, output_dim, nb_lstm_layers, nb_lstm_units, batch_size):
+    def __init__(self, input_dim, output_dim, nb_lstm_layers, nb_lstm_units, batch_size, include_correct):
         super(GRU_MODEL, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim # num of possible content
@@ -39,11 +39,15 @@ class GRU_MODEL(nn.Module):
         self.hidden_to_output = nn.Linear(self.nb_lstm_units,
                                           self.output_dim)
         # [EMBED TODO]: Add the inputs for embeddings
+        if include_correct:
+            embedding_dim = self.input_dim
+        else:
+            embedding_dim = self.input_dim*2
         self.embedding = nn.Embedding(
             # [EMBED TODO] if is_correct included, then
             #    double or increase output dim to value
             num_embeddings = output_dim+1, # output_dim = num of possible content
-            embedding_dim = self.input_dim, # number of hidden dimensions
+            embedding_dim = embedding_dim, # number of hidden dimensions
             padding_idx = 0
             )
 
