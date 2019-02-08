@@ -6,8 +6,8 @@ learning_rate: 0.001
 test_perc: 0.2
 threshold: 0.2
 perc_sample_print: 0.00
-data_name: 'prealgonly3ahead'
+data_name: 'geom3ahead'
 include_correct: True
-exercise_filename: '~/sorted_data/khan_problem_token_prealgonly'
+exercise_filename: '~/sorted_data/khan_problem_token_geom'
 output_sample_filename: '~/sorted_data/sample_sessions/sample_prediction_generated'
-content_index_filename: 'data/exercise_index_prealgonly'
+content_index_filename: 'data/exercise_index_geom'
