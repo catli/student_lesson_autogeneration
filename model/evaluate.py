@@ -1,4 +1,7 @@
 
+'''
+   To evaluate the loss of prediction on validation data
+'''
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -7,17 +10,19 @@ import torch.utils.data as Data
 import numpy as np
 from process_data import split_train_and_test_data, convert_token_to_matrix
 import random
+import csv
 import pdb
 
-# for validation loss in early stopping
 
 
 def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
-                  output_sample_filename, epoch, exercise_to_index_map, 
-                  perc_sample_print, include_correct):
-    # set in training node
-    # perc_sample_print = 0.05 # set the percent sample
-
+                 include_correct):
+    '''
+      # output_sample_filename, epoch, exercise_to_index_map, 
+      # perc_sample_print, ):
+        set in training node
+        perc_sample_print = 0.05 # set the percent sample
+    '''
     model.eval()
     val_loss = []
     total_predicted = 0
@@ -51,10 +56,10 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
             y_pred, padded_label, threshold)  # .cuda()
         threshold_output, num_no_pred = mask_padded_errors(
             threshold_output, seq_lens)
-        if (random.random() <= perc_sample_print):
-            writer_sample_output(output_sample_filename, epoch, step, padded_input,
-                                threshold_output, padded_label, correct_ones,
-                                exercise_to_index_map, include_correct)
+        # if (random.random() <= perc_sample_print):
+        #     writer_sample_output(output_sample_filename, epoch, step, padded_input,
+        #                         threshold_output, padded_label, correct_ones,
+        #                         exercise_to_index_map, include_correct)
         total_predicted += len(torch.nonzero(threshold_output))
         total_label += len(torch.nonzero(padded_label))
         total_correct += len(torch.nonzero(correct_ones))
@@ -96,7 +101,6 @@ def find_correct_predictions(output, label, threshold):
     # where prediction is incorrect (label is one and
     # threshold output 0), then the difference would be 1
     predict_diff = label - threshold_output
-    # set_correct_to_one = F.threshold(0.99, 0)
     incorrect_ones = F.threshold(predict_diff, 0.999, 0)
     correct_ones = label - incorrect_ones
     return threshold_output, correct_ones
@@ -130,98 +134,7 @@ def find_max_predictions(output, label, threshold):
     # where prediction is incorrect (label is one and
     # threshold output 0), then the difference would be 1
     predict_diff = label - threshold_output
-    # set_correct_to_one = F.threshold(0.99, 0)
     incorrect_ones = F.threshold(predict_diff, 0.999, 0)
     correct_ones = label - incorrect_ones
     return threshold_output, correct_ones
 
-
-def writer_sample_output(output_sample_filename, epoch, step, padded_input,
-                        threshold_output, padded_label, correct_ones,
-                        exercise_to_index_map, include_correct):
-    '''
-        Randomly sample batches, and students with each batch
-        to write data
-        [REFORMAT TODO] turn into class and split write student iter
-    '''
-    index_to_exercise_map = create_index_to_content_map(exercise_to_index_map)
-    step_filename = output_sample_filename+'_'+'ep'+str(epoch)+'st'+str(step)
-    step_writer = open(step_filename, 'w')
-    # iterate over students
-    for i, _ in enumerate(padded_label):
-        student = 'step'+str(step) + 'batchstud' + str(i)
-        stud_input = padded_input[i]
-        actual = padded_label[i]
-        prediction = threshold_output[i]
-        correct = correct_ones[i]
-        write_student_sample(step_writer, student, stud_input,
-                             actual, prediction, correct,
-                             index_to_exercise_map, include_correct)
-    step_writer.close()
-
-
-def write_student_sample(sample_writer, student, stud_input,
-                         actual, prediction, correct, index_to_content_map,
-                         include_correct):
-    '''
-        print readable prediciton sample
-        for input, output, label expect a matrix that's already
-        converted to ones where value above threshold set to 1
-    '''
-    content_num = len(index_to_content_map)
-    for i, label in enumerate(actual):
-        # pass over the first one, no prediction made
-        if i == 0:
-            continue
-        if include_correct:
-            readable_input = create_readable_list_with_correct(
-                stud_input[i], index_to_content_map, content_num)
-        else:
-            readable_input = create_readable_list(
-                stud_input[i], index_to_content_map)
-        readable_output = create_readable_list(
-            prediction[i], index_to_content_map)
-        readable_label = create_readable_list(
-            label, index_to_content_map)
-        readable_correct = create_readable_list(
-            correct[i], index_to_content_map)
-        sample_writer.write(student + '\t' +
-                            str(readable_input) + '\t' +
-                            str(readable_output) + '\t' +
-                            str(readable_label) + '\t' +
-                            str(readable_correct) + '\n')
-
-
-def create_readable_list(vect, index_to_content_map):
-    '''
-       create the readable list of cotent
-    '''
-    content_list = []
-    indices = np.where(vect > 0.01)[0]
-    for index in indices:
-        content_list.append(index_to_content_map[index+1])
-    return content_list
-
-
-def create_readable_list_with_correct(vect, index_to_content_map, content_num):
-    '''
-       create the readable list of cotent
-    '''
-    content_list = []
-    indices = np.where(vect[:content_num-1] > 0.01)[0]
-    for index in indices:
-        content = index_to_content_map[index+1]
-        perc_correct = vect[content_num + index].numpy()
-        content_list.append((content, str(perc_correct)))
-    return content_list
-
-
-def create_index_to_content_map(content_index):
-    '''
-        Reverse the content name to index map
-    '''
-    index_to_content_map = {}
-    for content in content_index:
-        index = content_index[content]
-        index_to_content_map[index] = content
-    return index_to_content_map

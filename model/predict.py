@@ -1,3 +1,6 @@
+'''
+    Read in test data and predict sessions from existing models
+'''
 import torch
 import torch.utils.data as Data
 from torch.nn import functional as F
@@ -10,11 +13,12 @@ from torch.autograd import Variable
 from gru import GRU_MODEL as gru_model
 import pdb
 
-'''
-    Read in test data and predict sessions from existing models
-'''
+
 def predict_sessions(model, full_data, keys, content_dim, threshold, output_filename,
               exercise_to_index_map, include_correct):
+    '''
+        create recommended session for each session
+    '''
     data_index = torch.IntTensor(range(len(keys)))
     torch_data_index = Data.TensorDataset(data_index)
     loader = Data.DataLoader(dataset=torch_data_index,
@@ -171,22 +175,10 @@ def create_index_to_content_map(content_index):
     return index_to_content_map
 
 
-# def init_hidden(model):
-#     '''
-#         initiate hidden layer as tensor
-#         approach for pytorch 1.0.0
-#         earlier versions use "Variable" to initiate tensor
-#         variable
-#         input, 
-#         # nb_lstm_layers, batch_size, nb_lstm_units
-#     '''
-#     hidden_layer = Variable(torch.zeros(1, 1, 50))
-#     return hidden_layer
-
 
 def run_inference():
     print('start')
-    loaded_params = yaml.load(open('predict_params.yaml', 'r'))
+    loaded_params = yaml.load(open('input/predict_params.yaml', 'r'))
     model_filename = loaded_params['model_filename']
     nb_lstm_units = loaded_params['nb_lstm_units']
     nb_lstm_layers = loaded_params['nb_lstm_layers']

@@ -144,7 +144,7 @@ def extract_content_map(content_index_filename):
     '''
     index_reader = open(content_index_filename, 'r')
     exercise_to_index_map = json.load(index_reader)
-    content_num = count_content_num(exercise_to_index_map)
+    content_num = len(exercise_to_index_map.keys())
     return exercise_to_index_map, content_num
 
 
@@ -163,8 +163,7 @@ def split_train_and_test_data(exercise_filename, content_index_filename,
     # to expose the json file
     index_reader = open(content_index_filename, 'r')
     exercise_to_index_map = json.load(index_reader)
-    # content_num = count_content_num(exercise_to_index_map)
-    return ordered_train_keys, ordered_val_keys, full_data #, content_num
+    return ordered_train_keys, ordered_val_keys, full_data 
 
 
 def split_train_and_test_ids(json_data, test_perc):
@@ -203,8 +202,5 @@ def create_key_seqlen_pair(set_ids, json_data):
         key_seq_pair.append((id, seq_len))
     return key_seq_pair
 
-
-def count_content_num(exercise_map):
-    return len(exercise_map.keys())
 
 

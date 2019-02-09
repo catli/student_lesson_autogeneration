@@ -64,17 +64,17 @@ class GRU_MODEL(nn.Module):
         # undo packing operation
         unpacked_out, _ = utils.rnn.pad_packed_sequence(
             gru_out, batch_first=True)
-        # [TODO] check to see what this unpacking is doing
         unpacked_out = unpacked_out.contiguous()
         unpacked_out = unpacked_out.view(-1, unpacked_out.shape[2])
         unpacked_out = self.hidden_to_output(unpacked_out)
-        # Add a sigmoid layer
+        # add a sigmoid layer
         sigmoid_out = torch.sigmoid(unpacked_out)
         output = sigmoid_out.view(self.batch_size, -1, self.output_dim)
         return output
 
     def loss(self, output, label):
-        # [TODO] figure out how to improve the loss function
+        # use mean-square error loss function
+        # tested cross-entropy, which did not work as well
         mse = nn.MSELoss()
         loss = mse(output, label)
         return loss
