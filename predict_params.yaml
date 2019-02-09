@@ -1,0 +1,9 @@
+model_filename: 'model_unit50layer1bsize2thresh01_3only3ahead'
+nb_lstm_units: 50
+nb_lstm_layers: 1
+include_correct: True
+threshold: 0.2
+batchsize: 1
+exercise_filename: '~/sorted_data/khan_problem_token_3only10s_tiny'
+output_filename: '~/sorted_data/sample_sessions/3relthresh02correct3ahead'
+content_index_filename: 'data/exercise_index_3only'

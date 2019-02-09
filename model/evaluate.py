@@ -47,7 +47,7 @@ def evaluate_loss(model, val_data, loader, val_keys, content_dim, threshold,
         loss = model.loss(y_pred, padded_label)  # .cuda()
         # append the loss after converting back to numpy object from tensor
         val_loss.append(loss.data.numpy())
-        threshold_output, correct_ones = find_correct_predictions(
+        threshold_output, correct_ones = find_max_predictions(
             y_pred, padded_label, threshold)  # .cuda()
         threshold_output, num_no_pred = mask_padded_errors(
             threshold_output, seq_lens)
@@ -92,6 +92,40 @@ def find_correct_predictions(output, label, threshold):
     # thresholder = F.threshold(threshold, 0)
     # any predicted values below threshold be set to 0
     threshold_output = F.threshold(output, threshold, 0)
+    # find the difference between label and prediction
+    # where prediction is incorrect (label is one and
+    # threshold output 0), then the difference would be 1
+    predict_diff = label - threshold_output
+    # set_correct_to_one = F.threshold(0.99, 0)
+    incorrect_ones = F.threshold(predict_diff, 0.999, 0)
+    correct_ones = label - incorrect_ones
+    return threshold_output, correct_ones
+
+
+def find_max_predictions(output, label, threshold):
+    '''
+        compare the predicted list and the actual rate
+        then generate the locaation of correct predictions
+        allow for a relative threshold, so that if no
+        values above absolute threshold, still return
+        selection
+    '''
+    # find the max prediction for each session
+    max_val = torch.max(output, dim=2)[0].detach().numpy()
+    # set the relative threshold output to zero
+    rel_thresh_output = torch.zeros(output.shape)
+    for stud, _ in enumerate(output):
+        for sess, _ in enumerate(output[stud]):
+            # set the relative threshold to one if within 0.01
+            # of max likelihood, threshold greater than 0.05
+            rel_thresh =  max_val[stud, sess] - 0.09
+            if rel_thresh<0.05:
+                rel_thresh = 0.05
+            rel_thresh_output[stud, sess] = torch.Tensor((
+                output[stud, sess].detach().numpy() >=rel_thresh
+                ).astype(float))
+    abs_threshold_output = F.threshold(output, threshold, 0)
+    threshold_output = torch.max(rel_thresh_output, abs_threshold_output)
     # find the difference between label and prediction
     # where prediction is incorrect (label is one and
     # threshold output 0), then the difference would be 1

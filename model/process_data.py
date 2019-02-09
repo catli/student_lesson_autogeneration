@@ -66,7 +66,7 @@ def create_padded_matrix(batch_index, json_data, json_keys, content_num,
     # take first n-1 sessions for input and last n-1 sessions for output
     input_padded = input_padded[:, :-1]
     # [NEXT TODO] add num_next
-    label_padded = max_next_sessions(label_padded[:, 1:], 5)
+    label_padded = max_next_sessions(label_padded[:, 1:], 3)
     return input_padded, label_padded
 
 
@@ -102,7 +102,7 @@ def create_padded_matrix_with_correct(batch_index, json_data, json_keys,
     # take first n-1 sessions for input and last n-1 sessions for output
     concat_input_padded = concat_input_padded[:, :-1]
     # [NEXT TODO] add num_next
-    label_padded = max_next_sessions(label_padded[:, 1:], 5)
+    label_padded = max_next_sessions(label_padded[:, 1:], 3)
     return concat_input_padded, label_padded
 
 
@@ -149,7 +149,7 @@ def extract_content_map(content_index_filename):
 
 
 def split_train_and_test_data(exercise_filename, content_index_filename,
-                              test_perc):
+                              test_perc = 0 ):
     '''
         split the data into training and test by learners
     '''
@@ -174,7 +174,7 @@ def split_train_and_test_ids(json_data, test_perc):
     '''
     student_ids = [student for student in json_data]
     train_ids, val_ids = train_test_split(student_ids,
-                                          test_size=0.2)
+                                          test_size=test_perc)
     ordered_train_keys = create_ordered_sequence_list(train_ids, json_data)
     ordered_val_keys = create_ordered_sequence_list(val_ids, json_data)
     return ordered_train_keys, ordered_val_keys
