@@ -16,11 +16,11 @@ I selected the GRU model, because it can transfer memory from previous input ste
 
 ![alt text](png/gru_colah.png "source: Chris Colah's blog post")
 
-The PathFinder adapted the GRU model to predict lessons on Khan Academy for students. Below is a diagram of how the PathFinder predicts activities for one of the student's session. Each session is represented as a vector or embedding describing all the activities they worked on and what percent of questions they answered correctly. At each time step, the GRU model reads the vector representing the last session, along with a hidden layer representing the stored memory of previous sessions. The model generates an output and a new hidden layer based on on what it wants to throw out and keep. By having the flexibility to store different components of previous activities in memory, the GRU model generates much better than predicting on just the last session alone.
+The PathFinder adapted the GRU model to predict lessons on Khan Academy for students. Below is a diagram of how the PathFinder predicts activities for one student session. Each session is represented as a vector or embedding describing all the activities they worked on and what percent of questions they answered correctly. At each time step, the GRU model reads the vector representing the last session, along with a hidden layer representing the stored memory of previous sessions. The model generates an output and a new hidden layer based on on what it wants to throw out and keep. By having the flexibility to store different components of previous activities in memory, the GRU model generates much better than predicting on just the last session alone.
 
 ![alt text](png/pathfinder_gru.png "How PathFinder Works")
 
-For each predicted session, the model validates the recommendation against actual activities completed by students. Since the model is trained and validated on highly-motivated students, the assumption is that if a model is able to predict their selected activities with high recall and precision, it is picking the optimal pathway. Because student pathways can be quite noisy and the potential selected activities quite high, the precision and recall will not be at the levels comparable to applications in NLP.
+For each predicted session, the model validates the recommendation against actual activities completed by students. Since the model is trained and validated on highly-motivated students, the assumption is that if a model is able to predict their selected activities with high recall and precision, it is picking the optimal pathway. Because there are thousands of possible activities selected and individual pathways quite different from student to student, the precision and recall will not be at the levels comparable to applications in NLP.
 
 
 
@@ -58,20 +58,30 @@ Based on the token mapping and the session activities, the input for Nadia will 
 ### What are the files in this repo
 
 `input`: Directory with files storing model parameters
+
 > `my_env.yml`: Stores conda environment
+
 > `model_params.yaml`: Stores model parameters for `train.py`
+
 > `predict_params.yaml`: Stores prediction parameters for `predict.py`
 
+
 `model`: Directory that runs the GRU model on tokenized data
+
 > `train.py`: Run training model and evaluate the test result
+
 > `gru.py`: Define the GRU model class, with forward propagation and loss function
+
 > `evaluate.py`: Function to evaluate loss
+
 > `process_data.py`: Function to convert ingested token data into model input vector
+
 > `predict.py`: Run inference on test data using a trained model
 
 > `logisticnn.py`: Run a logistic model prediction, not used for GRU model but provides baseline performance
 
 `data`: Directory to process raw data into tokenize form, with available index
+
 `summary`: Summarize dataset and perform kmeans-cluster on raw student data 
 
 
