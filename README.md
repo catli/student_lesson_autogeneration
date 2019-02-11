@@ -109,5 +109,6 @@ The model is inspired by a couple of different pieces of work and the resources 
 Below is the snapshot of how this project was built up and organized.
 
 ![alt text](png/asana_wk1_2.png)
+
 ![alt text](png/asana_wk3_4.png)
 
