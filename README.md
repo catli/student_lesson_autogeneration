@@ -1,4 +1,3 @@
-<script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 
 # Student Lesson Path-Finder
 [*Insight AI Fellowship Project*] The purpose of this project is to auto-generate lessons for students using Khan Academy. Every week, millions of students access Khan Academy for its free educational content. However because there are thousands of different exercises, videos and articles, students can easily lose track of how to progress through the content. The goal of this project is to try to learn optimal paths from highly motivated students. To prediction uses Gate Recurrent Unit (GRU) model, a type of RNN, to predict optimal future session activities.
@@ -13,7 +12,7 @@ The model uses a type of Recurrent Neural Network (RNN) called Gated Recurrent U
 
 
 #### GRU Model
-I selected the GRU model, bedcause it can transfer memory from previous input steps to future steps. Below is a diagram representing how the GRU cell at each step works. At time step $t$, the model input the input _x<sub>t</sub>_, a hidden layer from the previous _h<sub>t-1</sub>_. The hidden layer represents the memory passed from previous sessions. The update gate _z<sub>t</sub>_ is then used to decide what to keep and what to throw out.
+I selected the GRU model, bedcause it can transfer memory from previous input steps to future steps. Below is a diagram representing how the GRU cell at each step works. At time step _t_, the model input the input _x<sub>t</sub>_, a hidden layer from the previous _h<sub>t-1</sub>_. The hidden layer represents the memory passed from previous sessions. The update gate _z<sub>t</sub>_ is then used to decide what to keep and what to throw out.
 
 ![alt text](png/gru_colah.png "source: Chris Colah's blog post")
 
@@ -86,14 +85,16 @@ Based on the token mapping and the session activities, the input for Nadia will 
     ` conda env create -f environment.yml`
 
 #### Training
-[TODO] add training
+[TODO] add training steps
 
 #### Inference
 [TODO] add inference steps
 
 
 ### Results
+Below are the comparison results:
 
+![alt text](png/result_table.png)
 
 
 
