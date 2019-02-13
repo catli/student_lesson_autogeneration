@@ -27,15 +27,15 @@ def convert_token_to_matrix(batch_index, json_data, json_keys, content_num,
     max_seq = np.max(num_sess) + 1
     seq_lens = num_sess
     max_content = np.max(num_content)
-    if include_correct:
-        # [EMBED TODO] update the input if needed
-        input_padded, label_padded = create_padded_matrix_with_correct(
-            batch_index, json_data, json_keys, content_num, max_content)
-    else:
-        input_padded = create_padded_sequence(batch_index, json_data, json_keys,
-            max_seq, max_content)
-        label_padded = create_padded_matrix(batch_index, json_data, json_keys,
-            content_num, max_seq)
+    # if include_correct:
+    #     # [EMBED TODO] update the input if needed
+    #     input_padded, label_padded = create_padded_matrix_with_correct(
+    #         batch_index, json_data, json_keys, content_num, max_content)
+    # else:
+    input_padded = create_padded_sequence(batch_index, json_data, json_keys,
+        max_seq, max_content)
+    label_padded = create_padded_matrix(batch_index, json_data, json_keys,
+        content_num, max_seq)
     # assign the number of sessions as sequence length for each student
     # this will feed be used later to tell the model
     # which sessions are padded
