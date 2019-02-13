@@ -20,9 +20,8 @@ import pdb
 import yaml
 
 
-def train_and_evaluate(model, full_data, train_keys, val_keys,
-                       optimizer, content_dim, threshold, output_sample_filename,
-                       exercise_to_index_map, max_epoch, file_affix, perc_sample_print,
+def train_and_evaluate(model, full_data, train_keys, val_keys, optimizer,
+                       content_dim, threshold, max_epoch, file_affix,
                        include_correct):
     result_writer = open(
         os.path.expanduser('~/sorted_data/output_' + file_affix), 'w')
@@ -46,8 +45,8 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
                                  batch_size=batchsize,
                                  num_workers=2,
                                  drop_last=True)
-    while True:
-        epoch += 1
+    for count in range(max_epoch):
+        poch = count + 1
         model.print_embeddings(content_dim, epoch)
         print('EPOCH %s:' % str(epoch))
         train_loss = train(model, optimizer, full_data, train_loader,
@@ -58,21 +57,16 @@ def train_and_evaluate(model, full_data, train_keys, val_keys,
         eval_loss, total_predicted, total_label, total_correct, \
             total_no_predicted, total_sessions = evaluate_loss(
                 model, full_data, val_loader, val_keys, content_dim, threshold,
-                output_sample_filename, epoch, exercise_to_index_map,
-                perc_sample_print, include_correct)
+                include_correct)
         eval_loss_epoch.append(eval_loss)
         # num_predicted, num_label, num_correct = evaluate_precision_and_recall(
         #     model, val_loader, val_data, val_keys, batchsize, content_dim, threshold)
-        # [TODO] write precision and recall to output file
         epoch_result = 'Epoch %d test: %d / %d  precision \
                     and %d / %d  recall with %d / %d no prediction sess \n' % (
             epoch, total_correct, total_predicted,
             total_correct, total_label, total_no_predicted, total_sessions)
         result_writer.write(epoch_result)
         print(epoch_result)
-        if epoch >= max_epoch:
-            # [TODO] consider adding an early stopping logic
-            break
     # plot loss
     plot_loss(training_loss_epoch, file_affix)
 
@@ -123,26 +117,7 @@ def plot_loss(loss_trend, file_affix):
     plt.clf()
 
 
-if __name__ == '__main__':
-    # set hyper parameters
-    loaded_params = yaml.load(open('model_params.yaml', 'r'))
-    max_epoch = loaded_params['max_epoch']
-    nb_lstm_units = loaded_params['nb_lstm_units']
-    nb_lstm_layers = loaded_params['nb_lstm_layers']
-    batchsize = loaded_params['batchsize']
-    learning_rate = loaded_params['learning_rate']
-    test_perc = loaded_params['test_perc']
-    threshold = loaded_params['threshold']
-    data_name = loaded_params['data_name']
-    perc_sample_print = loaded_params['perc_sample_print']
-    include_correct = loaded_params['include_correct']
-    exercise_filename = os.path.expanduser(
-        loaded_params['exercise_filename'])
-    output_sample_filename = os.path.expanduser(
-        loaded_params['output_sample_filename'])
-    content_index_filename = loaded_params['content_index_filename']
-    input_dim = loaded_params['embed_dim'] 
-    embed_lr = loaded_params['embed_lr'] 
+def run_train_and_evaluate():
     # creat ethe filename
     file_affix = 'Embed_' + \
         'unit' + str(nb_lstm_units) + \
@@ -158,20 +133,39 @@ if __name__ == '__main__':
     # if include perc correct in the input, then double dimensions
     # [EMBED TODO] add to model_params
     # input_dim = 10
-	
     model = gru_model(input_dim=input_dim,
                       output_dim=content_dim,
                       nb_lstm_layers=nb_lstm_layers,
                       nb_lstm_units=nb_lstm_units,
                       batch_size=batchsize,
-		      include_correct = include_correct)
+                      include_correct = include_correct)
     # [TODO] consider whether to include weight decay
     optimizer = torch.optim.Adam( [
         {'params':  model.model.parameters(), 'lr': learning_rate},
         {'params':  model.hidden_to_output.parameters(), 'lr': learning_rate},
         {'params':  model.embedding.parameters(), 'lr': embed_lr}])
     train_and_evaluate(model, full_data, train_keys, val_keys,
-                       optimizer, content_dim, threshold,
-                       output_sample_filename, exercise_to_index_map, max_epoch, file_affix,
-                       perc_sample_print, include_correct)
-    torch.save(model.state_dict(), 'EmbedGRUmodel_' + file_affix)
+                       optimizer, content_dim, threshold, max_epoch, file_affix,
+                       include_correct)
+    # torch.save(model.state_dict(), 'EmbedGRUmodel_' + file_affix)
+
+
+if __name__ == '__main__':
+    # set hyper parameters
+    loaded_params = yaml.load(open('input/model_params.yaml', 'r'))
+    max_epoch = loaded_params['max_epoch']
+    nb_lstm_units = loaded_params['nb_lstm_units']
+    nb_lstm_layers = loaded_params['nb_lstm_layers']
+    batchsize = loaded_params['batchsize']
+    learning_rate = loaded_params['learning_rate']
+    test_perc = loaded_params['test_perc']
+    threshold = loaded_params['threshold']
+    data_name = loaded_params['data_name']
+    # perc_sample_print = loaded_params['perc_sample_print']
+    include_correct = loaded_params['include_correct']
+    exercise_filename = os.path.expanduser(
+        loaded_params['exercise_filename'])
+    content_index_filename = loaded_params['content_index_filename']
+    input_dim = loaded_params['embed_dim'] 
+    embed_lr = loaded_params['embed_lr'] 
+    run_train_and_evaluate()

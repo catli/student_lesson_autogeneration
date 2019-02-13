@@ -1,0 +1,11 @@
+
+model_filename: 'output/EmbedGRUmodel_Embed_unit50layer1bsize20thresh02_prealgembed20'
+nb_lstm_units: 50
+nb_lstm_layers: 1
+embed_dim: 20
+include_correct: True
+threshold: 0.2
+batchsize: 1
+exercise_filename: '~/sorted_data/khan_problem_token_prealgonly_tiny'
+output_filename: '~/sorted_data/sample_sessions/prealgEmbed20'
+content_index_filename: 'data/exercise_index_prealgonly'

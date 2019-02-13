@@ -90,7 +90,8 @@ class GRU_MODEL(nn.Module):
             batch data will be in the format of long tensors
             with the format [1,2,4,3],
         '''
-        embeddings = self.embedding(batch_data)
+        # convert to long tensor before feeding
+        embeddings = self.embedding(batch_data.long())
         # [EMBED TODO] preview the batch data to check operation
         batch_embeddings =torch.sum(embeddings, dim = 2)
         # set the normalization denominator
