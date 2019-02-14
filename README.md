@@ -14,7 +14,7 @@ The model uses a type of Recurrent Neural Network (RNN) called Gated Recurrent U
 #### GRU Model
 I selected the GRU model, because it can transfer memory from previous input steps to future steps with mechanisms to avoid [vanishing gradients](https://en.wikipedia.org/wiki/Vanishing_gradient_problem). Below is a diagram representing how the GRU model works at each step. At time step _t_, input _x<sub>t</sub>_ and a hidden layer _h<sub>t-1</sub>_ are fed into the model. The hidden layer represents the memory passed in from previous steps. The update gate _z<sub>t</sub>_ is then used to decide what to keep and what to throw out.
 
-![alt text](png/gru_colah.png "source: Chris Colah's blog post")*from Chris Colah's blog"
+![alt text](png/gru_colah.png "source: Chris Colah's blog post")*from Chris Colah's blog*
 
 The PathFinder adapted the GRU model to predict lessons on Khan Academy for students. Below is a diagram of how the PathFinder predicts activities for one student session. Each session is represented as a vector or embedding describing all the activities they worked on and what percent of questions they answered correctly. At each time step, the GRU model reads the vector representing the last session, along with a hidden layer representing the stored memory of previous sessions. The model generates an output and a new hidden layer based on on what it wants to throw out and keep. By having the flexibility to store different components of previous activities in memory, the GRU model generates much better than predicting on just the last session alone.
 
