@@ -147,6 +147,7 @@ def run_train_and_evaluate(loaded_params):
     torch.save(model.state_dict(), 'output/model_%s' % file_affix)
 
 
+
 if __name__ == '__main__':
     # set hyper parameters
     loaded_params = yaml.load(open('input/model_params.yaml', 'r'))
