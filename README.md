@@ -122,8 +122,9 @@ Below are the comparison results:
 
 
 ### Resources
-The model is inspired by a couple of different resources, available here:
+The work is inspired by a couple of different resources, available here:
 
+[Paper on Berkeley Goal-Based Recommendation](https://arxiv.org/pdf/1812.10078.pdf)  
 [RNN for game generation](https://medium.com/@ageitgey/machine-learning-is-fun-part-2-a26a10b68df3)  
 [Deep Knowledge Tracing](https://web.stanford.edu/~cpiech/bio/papers/deepKnowledgeTracing.pdf)  
 [Paper on GRU Model](https://arxiv.org/pdf/1406.1078.pdf)  
